@@ -11,6 +11,7 @@
 #include <sys/time.h>
 #include <sys/sysctl.h>
 #include <sys/syscall.h>
+#include <sys/statvfs.h>
 #include <time.h>
 #include <dirent.h>
 #include <ctype.h>
@@ -2249,11 +2250,8 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         char usb[32]={0}; int found=0;
         for(int i=0;i<=7&&!found;i++){
             char p[24]; snprintf(p,sizeof(p),"/mnt/usb%d",i);
-            DIR *d=opendir(p); if(d){
-                struct dirent *de; int n=0;
-                while((de=readdir(d))&&n<4) n++;
-                closedir(d); if(n>2){strncpy(usb,p,31);found=1;}
-            }
+            struct statvfs vfs;
+            if(statvfs(p,&vfs)==0&&vfs.f_blocks>0){strncpy(usb,p,31);found=1;}
         }
         mg_http_reply(c,200,"Content-Type: application/json\r\n",
             "{\"present\":%s,\"path\":\"%s\"}",found?"true":"false",found?usb:"");

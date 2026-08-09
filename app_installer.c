@@ -41,7 +41,7 @@ static int install_title_dir(const char *title_id, const char *dir) {
 
 #define TITLE_ID "SMPL00001"
 #define APP_ROOT "/user/app"
-#define MARKER   "/data/shadowmount/launcher.ok"
+#define MARKER   "/data/SMPlusGui/launcher.ok"
 
 static int write_file(const char *p, const uint8_t *d, size_t s) {
     FILE *f = fopen(p, "wb");

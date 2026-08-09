@@ -1,0 +1,14 @@
+{
+  "applicationCategoryType": 0,
+  "titleId": "PPSX99998",
+  "deeplinkUri": "http://127.0.0.1:7070/",
+  "localizedParameters": {
+    "defaultLanguage": "de-DE",
+    "de-DE": {
+      "titleName": "SMPlusGui"
+    },
+    "en-US": {
+      "titleName": "SMPlusGui"
+    }
+  }
+}

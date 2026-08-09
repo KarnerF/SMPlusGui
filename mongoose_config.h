@@ -1,0 +1,3 @@
+#ifndef MONGOOSE_CONFIG_H
+#define MONGOOSE_CONFIG_H
+#endif

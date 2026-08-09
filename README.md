@@ -74,6 +74,8 @@ This project would not exist without the work of the following people:
 
 - **The PS5 homebrew community** — for continued research, testing, and support.
 
+- **[GitHub Copilot](https://github.com/features/copilot)** — This project was built with AI assistance (GitHub Copilot / Claude Sonnet).
+
 ---
 
 ## Disclaimer

@@ -1,2 +1,4 @@
 *.elf
 *.o
+project_export.txt
+export_project.ps1

@@ -1811,8 +1811,6 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "},5000);"
           "var _usbPrev=null;"
           "setInterval(function(){"
-          "var sp=document.getElementById('panel-sys');"
-          "if(!sp||!sp.classList.contains('active'))return;"
           "fetch('/api/config/usb-status')"
           ".then(function(r){return r.json();})"
           ".then(function(d){"

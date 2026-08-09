@@ -39,7 +39,7 @@ static int install_title_dir(const char *title_id, const char *dir) {
     return sceAppInstUtilAppInstallAll(NULL);
 }
 
-#define TITLE_ID "PPSX99998"
+#define TITLE_ID "SMPL00001"
 #define APP_ROOT "/user/app"
 #define MARKER   "/data/shadowmount/launcher.ok"
 

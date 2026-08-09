@@ -2248,10 +2248,12 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
     }
     else if(mg_match(hm->uri,mg_str("/api/config/usb-status"),NULL)){
         char usb[32]={0}; int found=0;
+        struct stat mnt_st; stat("/mnt",&mnt_st);
         for(int i=0;i<=7&&!found;i++){
             char p[24]; snprintf(p,sizeof(p),"/mnt/usb%d",i);
-            struct statvfs vfs;
-            if(statvfs(p,&vfs)==0&&vfs.f_blocks>0){strncpy(usb,p,31);found=1;}
+            struct stat st;
+            /* real mount: st_dev differs from parent /mnt */
+            if(stat(p,&st)==0&&st.st_dev!=mnt_st.st_dev){strncpy(usb,p,31);found=1;}
         }
         mg_http_reply(c,200,"Content-Type: application/json\r\n",
             "{\"present\":%s,\"path\":\"%s\"}",found?"true":"false",found?usb:"");

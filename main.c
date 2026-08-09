@@ -1818,8 +1818,8 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           ".then(function(d){"
           "if(_usbPrev!==null&&_usbPrev!==d.present)location.reload();"
           "_usbPrev=d.present;" /* sessionStorage keeps panel across USB reload */
-          "}).catch(function(){});"
-          "},8000);"
+          "}).catch(function(){if(_usbPrev===true)location.reload();});"
+          "},2000);"
           "function filterLog(cat){"
           "_logFilter=cat;"
           "document.querySelectorAll('.lf-btn').forEach(function(b){"
@@ -2249,10 +2249,12 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
     }
     else if(mg_match(hm->uri,mg_str("/api/config/usb-status"),NULL)){
         char usb[32]={0}; int found=0;
-        struct statfs *mntbuf; int n=getmntinfo(&mntbuf,MNT_NOWAIT);
-        for(int i=0;i<n&&!found;i++){
-            if(strncmp(mntbuf[i].f_mntonname,"/mnt/usb",8)==0){
-                strncpy(usb,mntbuf[i].f_mntonname,31);found=1;
+        for(int i=0;i<=7&&!found;i++){
+            char p[24]; snprintf(p,sizeof(p),"/mnt/usb%d",i);
+            DIR *d=opendir(p); if(d){
+                struct dirent *de; int n=0;
+                while((de=readdir(d))&&n<4) n++;
+                closedir(d); if(n>2){strncpy(usb,p,31);found=1;}
             }
         }
         mg_http_reply(c,200,"Content-Type: application/json\r\n",

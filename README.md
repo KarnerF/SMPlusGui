@@ -62,11 +62,9 @@ Bulk operations (copy all, move all, download all, delete all) are available in 
 
 This project would not exist without the work of the following people:
 
-- **[drakmor](https://github.com/drakmor)** — Creator of [ShadowMountPlus](https://github.com/drakmor/ShadowMountPlus), the mount manager this GUI is built for. Also author of [APR Emu](https://github.com/drakmor/ampr_emu) and `build_ampr_index.py`.
+- **[drakmor](https://github.com/drakmor)** — Creator of [ShadowMountPlus](https://github.com/drakmor/ShadowMountPlus), the mount manager this GUI is built for.
 
 - **[itsPLK](https://github.com/itsPLK) / [najdek](https://github.com/najdek)** — [PS5 Payload Manager](https://github.com/itsPLK/ps5-payload-manager), which serves as the recommended payload loader for this ELF.
-
-- **[juma-sayeh](https://github.com/juma-sayeh)** — [PS5 Game Compressor](https://github.com/juma-sayeh/PS5-Game-Compressor), a related PS5 tool in the same ecosystem.
 
 - **[john-tornblom](https://github.com/john-tornblom)** — [PS5 Payload SDK](https://github.com/ps5-payload-dev) and various reference payloads that made this project possible.
 

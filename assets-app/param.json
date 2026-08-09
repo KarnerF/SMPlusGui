@@ -1,6 +1,6 @@
 {
-  "applicationCategoryType": 0,
-  "titleId": "PPSX99998",
+  "applicationCategoryType": 65536,
+  "titleId": "SMPL00001",
   "deeplinkUri": "http://127.0.0.1:7070/",
   "localizedParameters": {
     "defaultLanguage": "de-DE",

@@ -948,7 +948,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           sm_running ? "Stop" : "Start");
         { SMPrefs prefs; read_prefs(&prefs);
           H("<label style='display:flex;align-items:center;gap:5px;font-size:.72rem;color:var(--dim);cursor:pointer;margin-left:4px;'>"
-            "<input type='checkbox' id='auto-start-cb' onchange='saveAutoStart(this.checked)'%s> Auto-Start</label>",
+            "<input type='checkbox' id='auto-start-cb' onclick='saveAutoStart(this.checked)'%s> Auto-Start</label>",
             prefs.auto_start?" checked":"");
           H("<span id='pref-elf-lbl' style='font-family:var(--mono);font-size:.62rem;color:var(--dim);max-width:180px;"
             "overflow:hidden;text-overflow:ellipsis;white-space:nowrap;%s' title='%s'>%s</span>",

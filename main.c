@@ -985,7 +985,8 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         H("<form action='/save' method='POST' onsubmit='try{doSave();}catch(e){}return false;' style='flex:1;min-height:0;display:flex;flex-direction:column;'><div class='layout'>");
         H("<nav class='sidebar'>");
         H("<button type='button' class='nav-item active' data-p='mnt' onclick='showP(this)'>Mounting / Scan</button>");
-        H("<button type='button' class='nav-item' data-p='auto' onclick='showP(this)'>Autostart / Auto-Remove</button>");
+        H("<button type='button' class='nav-item' data-p='auto' onclick='showP(this)'>Autostart</button>");
+        H("<button type='button' class='nav-item' data-p='arm' onclick='showP(this)'>Auto-Remove</button>");
         H("<div class='nav-sep'></div>");
         H("<button type='button' class='nav-item' data-p='kst' onclick='showP(this)'>kstuff</button>");
         H("<button type='button' class='nav-item' data-p='fkl' onclick='showP(this)'>Fakelib</button>");
@@ -1047,10 +1048,10 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
             "style='background:transparent;border:1px solid var(--border);border-radius:6px;"
             "color:var(--dim);padding:5px 12px;cursor:pointer;font-family:var(--mono);font-size:.8rem;text-align:left;'>%s &#9660;</button></div>",
             L(LS_PREF_ELF), elfname);
-          H("</div>"); } /* close autostart section only, panel-auto stays open */
-        /* Auto-Remove section inside panel-auto */
-        H("<div id='ar-wrap' style='opacity:%s;pointer-events:%s'>"
-          "<div class='section'><div class='sublist-title'>Auto-Remove</div>",has_autoremove?"1":"0.35",has_autoremove?"auto":"none");
+          H("</div></div>"); } /* close autostart section + panel-auto */
+
+        /* Panel: Auto-Remove */
+        H("<div id='panel-arm' class='panel'><div id='ar-wrap' style='opacity:%s;pointer-events:%s'><div class='section'>",has_autoremove?"1":"0.35",has_autoremove?"auto":"none");
         H("<div class='row'><label for='arm'>%s <span class='ar-b vbadge' style='%s'>ab 1.7alpha3</span></label>"
           "<input type='checkbox' id='arm' name='auto_remove_missing_games' value='1' %s>"
           "<label class='switch' for='arm'></label></div>",
@@ -1062,7 +1063,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         H("<div class='numfield'><label>%s <span style='font-size:.7rem;color:var(--dim);font-weight:normal;'>(1\u201386400)</span> <span class='ar-b vbadge' style='%s'>ab 1.7alpha3</span></label>"
           "<input type='number' name='auto_remove_missing_delay_seconds' min='1' max='86400' value='%d'></div>",
           L(LS_DELAY_SEC),has_autoremove?"display:none;":"",cfg.auto_remove_missing_delay_seconds);
-        H("</div></div></div>"); /* close section + ar-wrap + panel-auto */
+        H("</div></div></div>"); /* close section + ar-wrap + panel-arm */
 
         /* Panel: Mounting / Scan */
         H("<div id='panel-mnt' class='panel active'><div class='section'>");

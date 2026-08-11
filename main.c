@@ -1976,7 +1976,10 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "fetch('/api/config/usb-status')"
           ".then(function(r){return r.json();})"
           ".then(function(d){"
-          "if(_usbPrev!==null&&_usbPrev!==d.present)location.reload();"
+          "if(_usbPrev!==null&&_usbPrev!==d.present){"
+          "var sp=document.getElementById('panel-sys');"
+          "if(sp&&sp.classList.contains('active'))location.reload();"
+          "else _usbPrev=d.present;}" /* update state without reload on other panels */
           "_usbPrev=d.present;" /* sessionStorage keeps panel across USB reload */
           "}).catch(function(){if(_usbPrev===true)location.reload();});"
           "},5000);"

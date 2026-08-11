@@ -2131,10 +2131,10 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
             if(sm_find_elfs(elfs)>0) strncpy(elf_path,elfs[0],SM_EPATH-1);
         }
         if(!elf_path[0]){ notify(en?"SM ELF not found":"SM ELF nicht gefunden"); mg_http_reply(c,200,"Content-Type: application/json\r\nCache-Control: no-cache\r\n","{\"ok\":false,\"err\":\"elf_not_found\"}"); return; }
-        /* respond immediately — actual send happens on next poll to avoid blocking browser */
-        strncpy(g_pending_elf, elf_path, SM_EPATH-1);
+        int r=send_elf_to_elfldr(elf_path);
+        if(r==-2){ notify(en?"elfldr not reachable (Port 9021/9020)":"elfldr nicht erreichbar (Port 9021/9020)"); mg_http_reply(c,200,"Content-Type: application/json\r\nCache-Control: no-cache\r\n","{\"ok\":false,\"err\":\"elfldr_not_reachable\"}"); return; }
         /* do NOT save preferred ELF here — managed by auto-start panel only */
-        mg_http_reply(c,200,"Content-Type: application/json\r\nCache-Control: no-cache\r\n","{\"ok\":true}");
+        mg_http_reply(c,200,"Content-Type: application/json\r\nCache-Control: no-cache\r\n","{\"ok\":%s}",r==0?"true":"false");
     }
     else if(mg_match(hm->uri,mg_str("/api/config/backup"),NULL)){
         const char *bdir=BAK_DIR;
@@ -2657,7 +2657,6 @@ int payload_main(void) {
     int polls=0, as_done=0;
     while(1){
         mg_mgr_poll(&mgr,1000); usleep(100000);
-        if(g_pending_elf[0]){ send_elf_to_elfldr(g_pending_elf); g_pending_elf[0]=0; }
         if(++polls==3) smplus_install_if_needed();
         if(polls==2 && !as_done){ /* ~2s after start */
             as_done=1;

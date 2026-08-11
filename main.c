@@ -947,19 +947,19 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           sm_running ? "stop" : "start",
           sm_running ? "Stop" : "Start");
         { SMPrefs prefs; read_prefs(&prefs);
-          /* Auto-Start toggle */
-          H("<button type='button' id='as-btn' class='sm-ctrl %s' onclick='toggleAS()'>Auto-Start</button>",
-            prefs.auto_start?"start":"stop");
-          /* ELF selector — only visible when preferred ELF is set */
-          if(prefs.preferred_elf[0]){
-              const char *sl=strrchr(prefs.preferred_elf,'/');
-              const char *nm=sl?sl+1:prefs.preferred_elf;
-              H("<button type='button' id='as-elf-btn' class='sm-ctrl start' onclick='pickASElf()' "
-                "title='%s' style='max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'>%s &#9660;</button>",
-                prefs.preferred_elf, nm);
-          } else {
-              H("<button type='button' id='as-elf-btn' class='sm-ctrl stop' onclick='pickASElf()' style='display:none;'></button>");
-          } }
+          const char *elfname="";
+          if(prefs.preferred_elf[0]){const char *sl=strrchr(prefs.preferred_elf,'/');elfname=sl?sl+1:prefs.preferred_elf;}
+          H("<div style='display:flex;align-items:center;gap:6px;margin-left:4px;'>"
+            "<span style='font-size:.72rem;color:var(--dim);'>Auto-Start</span>"
+            "<input type='checkbox' id='as-chk' style='display:none;'%s>"
+            "<label class='switch' for='as-chk' onclick='onAS()'></label>"
+            "<button type='button' id='as-elf-btn' onclick='pickASElf()' "
+            "style='%sbackground:transparent;border:1px solid var(--border);border-radius:6px;"
+            "color:var(--dim);padding:3px 8px;cursor:pointer;font-family:var(--mono);font-size:.65rem;'>%s &#9660;</button>"
+            "</div>",
+            prefs.auto_start?" checked":"",
+            prefs.preferred_elf[0]?"":"display:none;",
+            elfname[0]?elfname:"ELF"); }
         H("</div>"); /* close left flex */
         H("<div class='lang'>"
           "<a href='/setlang?l=auto' class='%s'>AUTO</a>"
@@ -1529,27 +1529,25 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           /* restore panel after USB-triggered reload */
           "var _rp=sessionStorage.getItem('panel');"
           "if(_rp){var _rb=document.querySelector('.nav-item[data-p=\"'+_rp+'\"]');if(_rb)showP(_rb);}"
-          "function toggleAS(){var btn=document.getElementById('as-btn');var isOn=btn.classList.contains('start');"
-          "if(isOn){btn.className='sm-ctrl stop';"
-          "fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'auto_start=0'});}"
-          "else{var eb=document.getElementById('as-elf-btn');"
-          "if(eb&&eb.style.display!=='none'&&eb.textContent.trim()){"
-          /* ELF already set — just enable */
-          "btn.className='sm-ctrl start';"
-          "fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'auto_start=1'});}"
-          "else pickASElf(true);}}" /* no ELF yet — open picker */
-          "function pickASElf(enableAfter){"
+          "function onAS(){var cb=document.getElementById('as-chk');"
+          "var eb=document.getElementById('as-elf-btn');"
+          "var willOn=!cb.checked;" /* onclick fires before checked toggles */
+          "if(willOn&&(!eb||eb.style.display==='none')){"
+          "cb.checked=false;" /* prevent toggle until ELF picked */
+          "pickASElf(true);return;}"
+          "fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},"
+          "body:'auto_start='+(willOn?1:0)});}"
+          "function pickASElf(enable){"
           "fetch('/api/sm/scan').then(function(r){return r.json();}).then(function(d){"
           "if(d.count===0){alert(_t.elf_nf);return;}"
-          "var cb=function(path){setASElf(path,enableAfter);};"
+          "var cb=function(p){setASElf(p,enable);};"
           "if(d.count===1)cb(d.paths[0]);else showElfPicker(null,d.paths,cb);"
           "}).catch(function(){alert(_t.err);});}"
           "function setASElf(path,enable){"
           "var nm=path.split('/').pop();"
           "var eb=document.getElementById('as-elf-btn');"
-          "if(eb){eb.textContent=nm+' \u25bc';eb.title=path;eb.className='sm-ctrl start';eb.style.display='';}"
-          "var ab=document.getElementById('as-btn');"
-          "if(enable&&ab)ab.className='sm-ctrl start';"
+          "if(eb){eb.textContent=nm+' \u25bc';eb.style.display='';}"
+          "if(enable){var cb=document.getElementById('as-chk');if(cb)cb.checked=true;}"
           "var body='preferred_elf='+encodeURIComponent(path)+(enable?'&auto_start=1':'');"
           "fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body});}"
           "function clearPrefElf(){fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'preferred_elf='}).then(function(){var l=document.getElementById('pref-elf-lbl'),b=document.getElementById('pref-elf-clr');if(l){l.style.display='none';l.textContent='';}if(b)b.style.display='none';});}"

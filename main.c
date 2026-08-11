@@ -986,8 +986,8 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         H("<button type='button' class='nav-item' data-p='auto' onclick='showP(this)'>Auto</button>");
         H("<button type='button' class='nav-item' data-p='scn' onclick='showP(this)'>Scan</button>");
         H("<div class='nav-sep'></div>");
-        H("<button type='button' class='nav-item' data-p='compat' onclick='showP(this)'>%s</button>",L(LS_COMPAT));
-        H("<button type='button' class='nav-item' data-p='srv' onclick='showP(this)'>Server</button>");
+        H("<button type='button' class='nav-item' data-p='compat' onclick='showP(this)'>kstuff / Fakelib</button>");
+        H("<button type='button' class='nav-item' data-p='srv' onclick='showP(this)'>Backend / API</button>");
         H("<button type='button' class='nav-item' data-p='sys' onclick='showP(this)'>Config</button>");
         H("<div class='nav-sep'></div>");
         H("<button type='button' class='nav-item' data-p='ovi' onclick='showP(this)'>%s</button>",L(LS_IMG_OVERRIDES));

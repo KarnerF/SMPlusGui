@@ -2560,25 +2560,10 @@ int payload_main(void) {
             as_done=1;
             SMPrefs prefs; read_prefs(&prefs);
             if(prefs.auto_start){
-                /* check SM running via API port — not debug.log which may have stale data */
-                int sm_up=0;
-                int ts=socket(AF_INET,SOCK_STREAM,0);
-                if(ts>=0){
-                    struct timeval tv={1,0};
-                    setsockopt(ts,SOL_SOCKET,SO_RCVTIMEO,&tv,sizeof(tv));
-                    setsockopt(ts,SOL_SOCKET,SO_SNDTIMEO,&tv,sizeof(tv));
-                    struct sockaddr_in ta; memset(&ta,0,sizeof(ta));
-                    ta.sin_family=AF_INET; ta.sin_port=htons(10101);
-                    ta.sin_addr.s_addr=inet_addr("127.0.0.1");
-                    if(connect(ts,(struct sockaddr*)&ta,sizeof(ta))==0) sm_up=1;
-                    close(ts);
-                }
-                if(!sm_up){
-                    char elf[SM_EPATH]={0};
-                    if(prefs.preferred_elf[0]) strncpy(elf,prefs.preferred_elf,SM_EPATH-1);
-                    else{ char elfs[SM_MAX_ELFS][SM_EPATH]; if(sm_find_elfs(elfs)>0) strncpy(elf,elfs[0],SM_EPATH-1); }
-                    if(elf[0]) send_elf_to_elfldr(elf);
-                }
+                char elf[SM_EPATH]={0};
+                if(prefs.preferred_elf[0]) strncpy(elf,prefs.preferred_elf,SM_EPATH-1);
+                else{ char elfs[SM_MAX_ELFS][SM_EPATH]; if(sm_find_elfs(elfs)>0) strncpy(elf,elfs[0],SM_EPATH-1); }
+                if(elf[0]) send_elf_to_elfldr(elf);
             }
         }
     }

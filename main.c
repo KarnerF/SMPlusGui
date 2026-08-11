@@ -983,7 +983,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         H("<form action='/save' method='POST' onsubmit='try{doSave();}catch(e){}return false;'><div class='layout'>");
         H("<nav class='sidebar'>");
         H("<button type='button' class='nav-item active' data-p='mnt' onclick='showP(this)'>Mounting</button>");
-        H("<button type='button' class='nav-item' data-p='auto' onclick='showP(this)'>Auto</button>");
+        H("<button type='button' class='nav-item' data-p='auto' onclick='showP(this)'>Autostart / Auto-Remove</button>");
         H("<button type='button' class='nav-item' data-p='scn' onclick='showP(this)'>Scan</button>");
         H("<div class='nav-sep'></div>");
         H("<button type='button' class='nav-item' data-p='kst' onclick='showP(this)'>kstuff</button>");
@@ -1036,6 +1036,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           const char *elfname="ELF w\u00e4hlen";
           if(prefs.preferred_elf[0]){const char *sl=strrchr(prefs.preferred_elf,'/');elfname=sl?sl+1:prefs.preferred_elf;}
           H("<div id='panel-auto' class='panel'><div class='section'>");
+          H("<div class='sublist-title'>Autostart</div>");
           H("<div class='row'><label>%s</label>"
             "<input type='checkbox' id='as-chk' style='display:none;'%s>"
             "<label class='switch' for='as-chk' onclick='onAS()'></label></div>",

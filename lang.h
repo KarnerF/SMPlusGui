@@ -122,7 +122,8 @@ typedef enum {
     LS_AUTOSTART = 110,
     LS_PREF_ELF = 111,
     LS_COMPAT = 112,
-    LS_COUNT = 113
+    LS_EXTRA_SCAN = 113,
+    LS_COUNT = 114
 } LangStrId;
 
 static int ui_lang = LANG_EN;
@@ -242,6 +243,7 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "Auto-Start",
         "Bevorzugte ELF",
         "Kompatibilit\u00e4t",
+        "Zus\u00e4tzliche Scan-Verzeichnisse",
     },
     /* EN */ {
         "running",
@@ -355,7 +357,9 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "Move local",
         "Clear log",        "Auto-Start",
         "Preferred ELF",
-        "Compatibility",    },
+        "Compatibility",
+        "Additional scan directories",
+    },
     /* FR */ {
         "actif",
         "inactif",
@@ -470,6 +474,7 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "D\u00e9marrage auto",
         "ELF pr\u00e9f\u00e9r\u00e9",
         "Compatibilit\u00e9",
+        "R\u00e9pertoires d'analyse suppl\u00e9mentaires",
     },
     /* ES */ {
         "activo",
@@ -585,6 +590,7 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "Inicio autom\u00e1tico",
         "ELF preferido",
         "Compatibilidad",
+        "Directorios de an\u00e1lisis adicionales",
     }
 };
 

@@ -70,7 +70,13 @@ static void notify(const char *msg) { _notify_send(msg, NULL); }
 
 /* SMPlusGui own preferences (not SM config) */
 #define PREFS_PATH "/data/SMPlusGui/prefs.ini"
-typedef struct { int auto_start; char preferred_elf[512]; } SMPrefs;
+#define PREFS_MAX_EXTRA 8
+typedef struct {
+    int auto_start;
+    char preferred_elf[512];
+    char extra_scan[PREFS_MAX_EXTRA][256];
+    int extra_scan_count;
+} SMPrefs;
 
 static void read_prefs(SMPrefs *p) {
     memset(p, 0, sizeof(*p));
@@ -80,6 +86,8 @@ static void read_prefs(SMPrefs *p) {
         line[strcspn(line,"\r\n")]=0;
         if(strncmp(line,"auto_start=",11)==0) p->auto_start=atoi(line+11);
         else if(strncmp(line,"preferred_elf=",14)==0) strncpy(p->preferred_elf,line+14,511);
+        else if(strncmp(line,"extra_scan=",11)==0&&p->extra_scan_count<PREFS_MAX_EXTRA)
+            strncpy(p->extra_scan[p->extra_scan_count++],line+11,255);
     }
     fclose(f);
 }
@@ -88,6 +96,7 @@ static void write_prefs(const SMPrefs *p) {
     FILE *f = fopen(PREFS_PATH,"w"); if(!f) return;
     fprintf(f,"auto_start=%d\n",p->auto_start);
     fprintf(f,"preferred_elf=%s\n",p->preferred_elf);
+    for(int i=0;i<p->extra_scan_count;i++) fprintf(f,"extra_scan=%s\n",p->extra_scan[i]);
     fclose(f);
 }
 
@@ -735,6 +744,24 @@ static int sm_find_elfs(char paths[SM_MAX_ELFS][SM_EPATH]) {
     }
 
     #undef IS_ELF
+
+    /* extra scan directories from prefs */
+    #define IS_ELF2(s) (strlen(s)>4&&strcmp((s)+strlen(s)-4,".elf")==0)
+    { SMPrefs prefs; read_prefs(&prefs);
+      for(int pi=0;pi<prefs.extra_scan_count&&count<SM_MAX_ELFS;pi++){
+          DIR *d=opendir(prefs.extra_scan[pi]); if(!d) continue;
+          struct dirent *e;
+          while((e=readdir(d))&&count<SM_MAX_ELFS){
+              if(e->d_name[0]=='.') continue;
+              char nl[64]={0}; int j=0;
+              while(e->d_name[j]&&j<63){nl[j]=(char)tolower((unsigned char)e->d_name[j]);j++;}
+              if(IS_ELF2(nl)&&strstr(nl,"shadowmount"))
+                  snprintf(paths[count++],SM_EPATH,"%s/%s",prefs.extra_scan[pi],e->d_name);
+          }
+          closedir(d);
+      }
+    }
+    #undef IS_ELF2
     return count;
 }
 
@@ -1053,13 +1080,14 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           H("<div class='numfield' style='margin-top:12px;'><label>%s</label>"
             "<button type='button' id='as-elf-btn' onclick='pickASElf()' "
             "style='background:transparent;border:1px solid var(--border);border-radius:6px;"
-            "color:var(--dim);padding:5px 12px;cursor:pointer;font-family:var(--mono);font-size:.8rem;'>%s &#9660;</button></div>"
-            "<div class='numfield' style='margin-top:8px;'><label>Custom path</label>"
-            "<input type='text' id='as-custom-path' placeholder='/data/pldmgr/payloads/shadowmount/shadowmount.elf'"
-            " style='width:100%%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;"
-            "color:var(--text);padding:5px 10px;font-family:var(--mono);font-size:.75rem;'"
-            " value='%s' onchange='setASCustomPath(this.value)'></div>",
-            L(LS_PREF_ELF), elfname, prefs.preferred_elf);
+            "color:var(--dim);padding:5px 12px;cursor:pointer;font-family:var(--mono);font-size:.8rem;'>%s &#9660;</button></div>",
+            L(LS_PREF_ELF), elfname);
+          H("<div class='sublist-title' style='margin-top:16px;'>%s</div>",L(LS_EXTRA_SCAN));
+          H("<div id='extra-scan-list'>");
+          for(int i=0;i<prefs.extra_scan_count;i++)
+              H("<div class='path-row'><input type='text' value='%s' placeholder='/mnt/usb0' onchange='saveExtraScan()'>"
+                "<button type='button' class='rm' onclick='rmExtraScan(this)'>&times;</button></div>",prefs.extra_scan[i]);
+          H("</div><button type='button' class='addbtn' onclick='addExtraScan()'>+ %s</button>",L(LS_ADD_PATH));
           H("</div></div>"); } /* close autostart section + panel-auto */
 
         /* Panel: Auto-Remove */
@@ -1552,6 +1580,17 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "if(btn)btn.textContent=nm+' \u25bc';"
           "fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},"
           "body:'preferred_elf='+encodeURIComponent(path)});}"
+          "function addExtraScan(){"
+          "var c=document.getElementById('extra-scan-list');"
+          "var d=document.createElement('div');d.className='path-row';"
+          "d.innerHTML='<input type=\"text\" placeholder=\"/mnt/usb0\" onchange=\"saveExtraScan()\"><button type=\"button\" class=\"rm\" onclick=\"rmExtraScan(this)\">&times;</button>';"
+          "c.appendChild(d);saveExtraScan();}"
+          "function rmExtraScan(btn){btn.parentElement.remove();saveExtraScan();}"
+          "function saveExtraScan(){"
+          "var rows=document.querySelectorAll('#extra-scan-list input');"
+          "var body='';"
+          "rows.forEach(function(r){if(r.value.trim())body+='extra_scan[]='+encodeURIComponent(r.value.trim())+'&';});"
+          "fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body||'extra_scan_clear=1'});}"
           "function onAS(){var cb=document.getElementById('as-chk');"
           "var willOn=!cb.checked;" /* onclick fires before checked toggles */
           "if(willOn&&(!eb||eb.style.display==='none')){"
@@ -2555,6 +2594,36 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         if(v[0]) p.auto_start=atoi(v);
         if(ef[0]||mg_http_get_var(&hm->body,"preferred_elf",ef,1)>=0)
             strncpy(p.preferred_elf,ef,511);
+        /* update extra_scan if present */
+        char clr[4]={0}; mg_http_get_var(&hm->body,"extra_scan_clear",clr,sizeof(clr));
+        if(clr[0]){ p.extra_scan_count=0; }
+        else if(memmem(hm->body.buf,hm->body.len,"extra_scan",10)){
+            /* parse all extra_scan[]= entries from body */
+            p.extra_scan_count=0;
+            const char *key="extra_scan[]=";
+            const char *pos=hm->body.buf;
+            const char *end=hm->body.buf+hm->body.len;
+            while(pos<end&&p.extra_scan_count<PREFS_MAX_EXTRA){
+                const char *found=(const char*)memmem(pos,end-pos,key,strlen(key));
+                if(!found) break;
+                const char *vstart=found+strlen(key);
+                const char *vend=(const char*)memchr(vstart,'&',end-vstart);
+                size_t vlen=vend?(size_t)(vend-vstart):(size_t)(end-vstart);
+                if(vlen>0&&vlen<255){
+                    /* url-decode */
+                    char *dst=p.extra_scan[p.extra_scan_count]; size_t di=0;
+                    for(size_t ci=0;ci<vlen&&di<254;ci++){
+                        if(vstart[ci]=='%'&&ci+2<vlen){
+                            char h[3]={vstart[ci+1],vstart[ci+2],0};
+                            dst[di++]=(char)strtol(h,NULL,16); ci+=2;
+                        } else dst[di++]=(vstart[ci]=='+'?' ':vstart[ci]);
+                    }
+                    dst[di]=0;
+                    if(dst[0]) p.extra_scan_count++;
+                }
+                pos=vstart+(vlen>0?vlen:1);
+            }
+        }
         write_prefs(&p);
         mg_http_reply(c,200,"Content-Type: application/json\r\n","{\"ok\":true}");
     }

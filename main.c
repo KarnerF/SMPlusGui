@@ -947,15 +947,19 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           sm_running ? "stop" : "start",
           sm_running ? "Stop" : "Start");
         { SMPrefs prefs; read_prefs(&prefs);
-          const char *elfname="Auto-Start";
-          if(prefs.auto_start&&prefs.preferred_elf[0]){
+          /* Auto-Start toggle */
+          H("<button type='button' id='as-btn' class='sm-ctrl %s' onclick='toggleAS()'>Auto-Start</button>",
+            prefs.auto_start?"start":"stop");
+          /* ELF selector — only visible when preferred ELF is set */
+          if(prefs.preferred_elf[0]){
               const char *sl=strrchr(prefs.preferred_elf,'/');
-              elfname=sl?sl+1:prefs.preferred_elf;
-          }
-          H("<button type='button' id='as-btn' class='sm-ctrl %s' onclick='toggleAS(this)' title='%s'>%s</button>",
-            prefs.auto_start?"start":"stop",
-            prefs.auto_start?prefs.preferred_elf:"Auto-Start deaktiviert",
-            elfname); }
+              const char *nm=sl?sl+1:prefs.preferred_elf;
+              H("<button type='button' id='as-elf-btn' class='sm-ctrl start' onclick='pickASElf()' "
+                "title='%s' style='max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'>%s &#9660;</button>",
+                prefs.preferred_elf, nm);
+          } else {
+              H("<button type='button' id='as-elf-btn' class='sm-ctrl stop' onclick='pickASElf()' style='display:none;'></button>");
+          } }
         H("</div>"); /* close left flex */
         H("<div class='lang'>"
           "<a href='/setlang?l=auto' class='%s'>AUTO</a>"
@@ -1525,24 +1529,29 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           /* restore panel after USB-triggered reload */
           "var _rp=sessionStorage.getItem('panel');"
           "if(_rp){var _rb=document.querySelector('.nav-item[data-p=\"'+_rp+'\"]');if(_rb)showP(_rb);}"
-          "function toggleAutoStart(btn){var on=btn.style.color!=='rgb(16, 185, 129)'&&btn.style.color!=='#10b981';"
-          "if(btn.style.borderColor==='rgb(16, 185, 129)'||btn.style.borderColor==='#10b981')on=false;else on=true;"
-          "btn.style.background=on?'rgba(16,185,129,.15)':'transparent';"
-          "btn.style.borderColor=on?'#10b981':'var(--border)';"
-          "btn.style.color=on?'#10b981':'var(--dim)';"
-          "saveAutoStart(on);}"
-          "function toggleAS(btn){var isOn=btn.classList.contains('start');"
-          "if(isOn){btn.className='sm-ctrl stop';btn.textContent='Auto-Start';btn.title='Auto-Start deaktiviert';"
+          "function toggleAS(){var btn=document.getElementById('as-btn');var isOn=btn.classList.contains('start');"
+          "if(isOn){btn.className='sm-ctrl stop';"
           "fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'auto_start=0'});}"
-          "else{fetch('/api/sm/scan').then(function(r){return r.json();}).then(function(d){"
-          "if(d.count===0)alert(_t.elf_nf);"
-          "else if(d.count===1)setASElf(btn,d.paths[0]);"
-          "else showElfPicker(null,d.paths,function(p){setASElf(btn,p);});"
-          "}).catch(function(){alert(_t.err);});}}"
-          "function setASElf(btn,path){var nm=path.split('/').pop();"
-          "btn.className='sm-ctrl start';btn.textContent=nm;btn.title=path;"
-          "fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},"
-          "body:'auto_start=1&preferred_elf='+encodeURIComponent(path)});}"
+          "else{var eb=document.getElementById('as-elf-btn');"
+          "if(eb&&eb.style.display!=='none'&&eb.textContent.trim()){"
+          /* ELF already set — just enable */
+          "btn.className='sm-ctrl start';"
+          "fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'auto_start=1'});}"
+          "else pickASElf(true);}}" /* no ELF yet — open picker */
+          "function pickASElf(enableAfter){"
+          "fetch('/api/sm/scan').then(function(r){return r.json();}).then(function(d){"
+          "if(d.count===0){alert(_t.elf_nf);return;}"
+          "var cb=function(path){setASElf(path,enableAfter);};"
+          "if(d.count===1)cb(d.paths[0]);else showElfPicker(null,d.paths,cb);"
+          "}).catch(function(){alert(_t.err);});}"
+          "function setASElf(path,enable){"
+          "var nm=path.split('/').pop();"
+          "var eb=document.getElementById('as-elf-btn');"
+          "if(eb){eb.textContent=nm+' \u25bc';eb.title=path;eb.className='sm-ctrl start';eb.style.display='';}"
+          "var ab=document.getElementById('as-btn');"
+          "if(enable&&ab)ab.className='sm-ctrl start';"
+          "var body='preferred_elf='+encodeURIComponent(path)+(enable?'&auto_start=1':'');"
+          "fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body});}"
           "function clearPrefElf(){fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'preferred_elf='}).then(function(){var l=document.getElementById('pref-elf-lbl'),b=document.getElementById('pref-elf-clr');if(l){l.style.display='none';l.textContent='';}if(b)b.style.display='none';});}"
           "function smVer(ver,maj,min,suf,num){""if(!ver)return false;""var m=ver.match(/^(\\d+)\\.(\\d+)(alpha|beta|test)?(\\d+)?/);""if(!m)return false;""var a=parseInt(m[1]),b=parseInt(m[2]),c=m[3]||'',d=parseInt(m[4]||'0');""if(a>maj)return true;if(a<maj)return false;""if(b>min)return true;if(b<min)return false;""var s={alpha:1,beta:2,test:3},vp=s[c]||4,mp=s[suf]||4;""if(vp>mp)return true;if(vp<mp)return false;""return d>=num;}""function refreshStatus(){""fetch('/api/status').then(r=>r.json()).then(d=>{""var c=document.getElementById('sm-status-chip');""if(!c)return;""var col=d.running?'#10b981':'#f87171';""c.innerHTML='<span style=\"width:7px;height:7px;border-radius:50%%;display:inline-block;background:'+col+';box-shadow:0 0 6px '+col+';'+(d.running?\"animation:pulse 2s infinite;\": \"\")+'\"></span> ShadowMount <b>'+d.status+'</b>';""var v=document.getElementById('sm-ver-chip');""if(v){v.style.display=(d.running&&d.version!=='nicht aktiv')?'flex':'none';""if(d.version!=='nicht aktiv')v.innerHTML='v <b>'+d.version+'</b>';}""var ver=d.version||'';""var ar=!d.running||smVer(ver,1,7,'alpha',3);""var pim=!d.running||smVer(ver,1,7,'alpha',4);""var as=document.getElementById('ar-wrap');""if(as){as.style.opacity=ar?\'1\':\'0.35\';as.style.pointerEvents=ar?\'auto\':\'none\';}""var ab=document.querySelectorAll('.ar-b');ab.forEach(function(e){e.style.display=ar?'none':'inline';});""var pb=document.getElementById('pim-badge');""if(pb)pb.style.display=pim?'none':'inline';""var pr=document.getElementById('pim-row');""if(pr)pr.style.opacity=pim?'1':'0.35';""if(pr)pr.style.pointerEvents=pim?'auto':'none';""var lb=document.getElementById('lang-badge');""if(lb)lb.style.display=pim?'none':'inline';""var lr=document.getElementById('lang-row');""if(lr)lr.style.opacity=pim?'1':'0.35';""if(lr)lr.style.pointerEvents=pim?'auto':'none';""var api=!d.running||smVer(ver,1,7,'alpha',3);""var aw=document.getElementById('api-wrap');""if(aw){aw.style.opacity=api?'1':'0.35';aw.style.pointerEvents=api?'auto':'none';}""var apib=document.getElementById('api-badge');""if(apib)apib.style.display=api?'none':'inline';""var fan=!d.running||smVer(ver,1,7,'alpha',5);""var fr=document.getElementById('fan-row');""if(fr){fr.style.opacity=fan?'1':'0.35';fr.style.pointerEvents=fan?'auto':'none';}""var fb=fr?fr.querySelector('.vbadge'):null;""if(fb)fb.style.display=fan?'none':'inline';""var cb=document.getElementById('sm-ctrl-btn');""if(cb){cb.setAttribute('data-action',d.running?'stop':'start');cb.className='sm-ctrl '+(d.running?'stop':'start');cb.textContent=d.running?'Stop':'Start';}""}).catch(()=>{});}""refreshStatus();""setInterval(refreshStatus,10000);""function smCtrl(){var btn=document.getElementById('sm-ctrl-btn');if(!btn)return;var action=btn.getAttribute('data-action');if(action==='stop'){btn.disabled=true;fetch('/api/sm/stop').then(function(){setTimeout(refreshStatus,1500);setTimeout(function(){btn.disabled=false;},2000);}).catch(function(){btn.disabled=false;});}else{btn.disabled=true;fetch('/api/sm/scan').then(function(r){return r.json();}).then(function(d){if(d.count===0){alert(_t.elf_nf);btn.disabled=false;}else if(d.count===1){launchElf(btn,d.paths[0]);}else{btn.disabled=false;showElfPicker(btn,d.paths);}}).catch(function(){btn.disabled=false;});}}""function launchElf(btn,path){if(btn)btn.disabled=true;fetch('/api/sm/start?path='+encodeURIComponent(path)).then(function(r){return r.json();}).then(function(d){"
           "if(btn)btn.disabled=false;"

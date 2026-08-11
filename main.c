@@ -1060,7 +1060,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         H("<div class='numfield'><label>%s <span style='font-size:.7rem;color:var(--dim);font-weight:normal;'>(1\u201386400)</span> <span class='ar-b vbadge' style='%s'>ab 1.7alpha3</span></label>"
           "<input type='number' name='auto_remove_missing_delay_seconds' min='1' max='86400' value='%d'></div>",
           L(LS_DELAY_SEC),has_autoremove?"display:none;":"",cfg.auto_remove_missing_delay_seconds);
-        H("</div></div></div>");
+        H("</div></div>"); /* close ar-wrap + section */
 
         /* Panel: Mounting */
         H("<div id='panel-mnt' class='panel active'><div class='section'>");

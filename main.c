@@ -997,6 +997,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         H("<form action='/save' method='POST' onsubmit='try{doSave();}catch(e){}return false;'><div class='layout'>");
         H("<nav class='sidebar'>");
         H("<button type='button' class='nav-item active' data-p='mnt' onclick='showP(this)'>Mounting</button>");
+        H("<button type='button' class='nav-item' data-p='ast' onclick='showP(this)'>Autostart</button>");
         H("<button type='button' class='nav-item' data-p='scn' onclick='showP(this)'>Scan</button>");
         H("<button type='button' class='nav-item' data-p='arm' onclick='showP(this)'>Auto-Remove</button>");
         H("<div class='nav-sep'></div>");
@@ -1045,6 +1046,22 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         H("</div></div>");
 
         /* Panel: Mounting */
+        /* ── Autostart panel ── */
+        { SMPrefs prefs; read_prefs(&prefs);
+          const char *elfname="ELF w\u00e4hlen";
+          if(prefs.preferred_elf[0]){const char *sl=strrchr(prefs.preferred_elf,'/');elfname=sl?sl+1:prefs.preferred_elf;}
+          H("<div id='panel-ast' class='panel'><div class='section'>");
+          H("<div class='badge'><span class='badge-dot'></span>AUTOSTART</div>");
+          H("<div class='row'><label>%s</label>"
+            "<input type='checkbox' id='as-chk' style='display:none;'%s>"
+            "<label class='switch' for='as-chk' onclick='onAS()'></label></div>",
+            L(LS_AUTOSTART), prefs.auto_start?" checked":"");
+          H("<div class='numfield' style='margin-top:12px;'><label>%s</label>"
+            "<button type='button' id='as-elf-btn' onclick='pickASElf()' "
+            "style='background:transparent;border:1px solid var(--border);border-radius:6px;"
+            "color:var(--dim);padding:5px 12px;cursor:pointer;font-family:var(--mono);font-size:.8rem;text-align:left;'>%s &#9660;</button></div>",
+            L(LS_PREF_ELF), elfname);
+          H("</div></div>"); }
         H("<div id='panel-mnt' class='panel active'><div class='section'>");
         SW("ro","mount_read_only",L(LS_READ_ONLY),cfg.mount_read_only);
         SW("fm","force_mount",L(LS_MOUNT_DAMAGED),cfg.force_mount);
@@ -2060,8 +2077,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         int r = send_elf_to_elfldr(elf_path);
         if(r==-1){ notify(en?"SM ELF not found":"SM ELF nicht gefunden"); mg_http_reply(c,200,"Content-Type: application/json\r\nCache-Control: no-cache\r\n","{\"ok\":false,\"err\":\"elf_not_found\"}"); return; }
         if(r==-2){ notify(en?"elfldr not reachable (Port 9021/9020)":"elfldr nicht erreichbar (Port 9021/9020)"); mg_http_reply(c,200,"Content-Type: application/json\r\nCache-Control: no-cache\r\n","{\"ok\":false,\"err\":\"elfldr_not_reachable\"}"); return; }
-        /* save as preferred ELF */
-        if(elf_path[0]){ SMPrefs p; read_prefs(&p); strncpy(p.preferred_elf,elf_path,511); write_prefs(&p); }
+        /* do NOT save preferred ELF here — managed by auto-start panel only */
         mg_http_reply(c,200,"Content-Type: application/json\r\nCache-Control: no-cache\r\n","{\"ok\":%s}",r==0?"true":"false");
     }
     else if(mg_match(hm->uri,mg_str("/api/config/backup"),NULL)){

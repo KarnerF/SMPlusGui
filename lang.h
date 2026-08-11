@@ -119,7 +119,9 @@ typedef enum {
     LS_MOVE_FROM_USB = 107,
     LS_MOVE_ALL_LOCAL = 108,
     LS_CLEAR_LOG = 109,
-    LS_COUNT = 110
+    LS_AUTOSTART = 110,
+    LS_PREF_ELF = 111,
+    LS_COUNT = 112
 } LangStrId;
 
 static int ui_lang = LANG_EN;
@@ -236,6 +238,8 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "Lokal verschieben",
         "Intern verschieben",
         "Log l\u00f6schen",
+        "Auto-Start",
+        "Bevorzugte ELF",
     },
     /* EN */ {
         "running",
@@ -347,8 +351,8 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "USB Backups",
         "Move local",
         "Move local",
-        "Clear log",
-    },
+        "Clear log",        "Auto-Start",
+        "Preferred ELF",    },
     /* FR */ {
         "actif",
         "inactif",
@@ -460,6 +464,8 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "D\u00e9placer local",
         "Cr\u00e9er sur USB",
         "Effacer le journal",
+        "D\u00e9marrage auto",
+        "ELF pr\u00e9f\u00e9r\u00e9",
     },
     /* ES */ {
         "activo",
@@ -572,6 +578,8 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "Mover local",
         "Mover local",
         "Borrar log",
+        "Inicio autom\u00e1tico",
+        "ELF preferido",
     }
 };
 

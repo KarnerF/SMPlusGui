@@ -987,8 +987,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         H("<div class='nav-sep'></div>");
         H("<button type='button' class='nav-item' data-p='kst' onclick='showP(this)'>kstuff</button>");
         H("<button type='button' class='nav-item' data-p='fkl' onclick='showP(this)'>Fakelib</button>");
-        H("<button type='button' class='nav-item' data-p='bkd' onclick='showP(this)'>Backend</button>");
-        H("<button type='button' class='nav-item' data-p='api' onclick='showP(this)'>API</button>");
+        H("<button type='button' class='nav-item' data-p='bkd' onclick='showP(this)'>Backend / API</button>");
         H("<button type='button' class='nav-item' data-p='sys' onclick='showP(this)'>Config</button>");
         H("<div class='nav-sep'></div>");
         H("<button type='button' class='nav-item' data-p='ovi' onclick='showP(this)'>%s</button>",L(LS_IMG_OVERRIDES));
@@ -1185,8 +1184,27 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
               H("<option value='%d'%s>%d&deg;C</option>",t,cur==t?" selected":"",t); }
         H("</select></div></div>");
         H("</div></div>");
-
-        /* Panel: Backup — separate rows per source, no file limit */
+        /* API section merged into panel-bkd */
+        H("<div id='api-wrap' style='opacity:%s;pointer-events:%s'><div class='section'>"
+          "<div class='sublist-title' style='margin-top:4px;'>API</div>",
+          has_api?"1":"0.35",has_api?"auto":"none");
+        if(!has_api)
+            H("<p style='margin:0 0 14px;'><span id='api-badge' class='vbadge'>ab 1.7alpha3</span></p>");
+        else
+            H("<span id='api-badge' class='vbadge' style='display:none;'>ab 1.7alpha3</span>");
+        H("<div class='numfield'><label>%s</label>"
+          "<select name='api_bind_address'>"
+          "<option value='127.0.0.1'%s>127.0.0.1 &mdash; %s</option>"
+          "<option value='0.0.0.0'%s>0.0.0.0 &mdash; %s</option>"
+          "</select></div>",
+          L(LS_BIND_ADDR),
+          strcmp(cfg.api_bind_address,"127.0.0.1")==0?" selected":"",
+          L(LS_LOCAL_ONLY),
+          strcmp(cfg.api_bind_address,"0.0.0.0")==0?" selected":"",
+          L(LS_ALL_IFACES));
+        NF("api_port",L(LS_PORT),"1","65535",cfg.api_port);
+        H("</div></div></div>"); /* close api-wrap + section + panel-bkd */
+ — separate rows per source, no file limit */
         { const char *bdir=BAK_DIR;
           mkdir("/data/SMPlusGui",0755); mkdir(bdir,0755);
           /* collect and sort local backups */
@@ -1360,25 +1378,8 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           #undef _BRD
           H("</div></div>"); }
 
-        /* Panel: API — ab SM v1.7alpha3 */
-        H("<div id='panel-api' class='panel'><div id='api-wrap' style='opacity:%s;pointer-events:%s'><div class='section'>",
-          has_api?"1":"0.35",has_api?"auto":"none");
-        if(!has_api)
-            H("<p style='margin:0 0 14px;'><span id='api-badge' class='vbadge'>ab 1.7alpha3</span></p>");
-        else
-            H("<span id='api-badge' class='vbadge' style='display:none;'>ab 1.7alpha3</span>");
-        H("<div class='numfield'><label>%s</label>"
-          "<select name='api_bind_address'>"
-          "<option value='127.0.0.1'%s>127.0.0.1 &mdash; %s</option>"
-          "<option value='0.0.0.0'%s>0.0.0.0 &mdash; %s</option>"
-          "</select></div>",
-          L(LS_BIND_ADDR),
-          strcmp(cfg.api_bind_address,"127.0.0.1")==0?" selected":"",
-          L(LS_LOCAL_ONLY),
-          strcmp(cfg.api_bind_address,"0.0.0.0")==0?" selected":"",
-          L(LS_ALL_IFACES));
-        NF("api_port",L(LS_PORT),"1","65535",cfg.api_port);
-        H("</div></div></div>"); /* close api */
+
+        /* Panel: Image Overrides */
         H("<div id='panel-ovi' class='panel'><div class='section'>");
         H("<div class='sublist-title'>image_ro</div>");
         H("<p class='hint'><b>&#128196; Beispiel:</b> &nbsp;<code>PPSA12345.exfat</code> &nbsp;%s&nbsp; <code>PPSA12345.ffpfs</code></p>",L(LS_OR));

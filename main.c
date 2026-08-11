@@ -982,9 +982,8 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
 
         H("<form action='/save' method='POST' onsubmit='try{doSave();}catch(e){}return false;'><div class='layout'>");
         H("<nav class='sidebar'>");
-        H("<button type='button' class='nav-item active' data-p='mnt' onclick='showP(this)'>Mounting</button>");
+        H("<button type='button' class='nav-item active' data-p='mnt' onclick='showP(this)'>Mounting / Scan</button>");
         H("<button type='button' class='nav-item' data-p='auto' onclick='showP(this)'>Autostart / Auto-Remove</button>");
-        H("<button type='button' class='nav-item' data-p='scn' onclick='showP(this)'>Scan</button>");
         H("<div class='nav-sep'></div>");
         H("<button type='button' class='nav-item' data-p='kst' onclick='showP(this)'>kstuff</button>");
         H("<button type='button' class='nav-item' data-p='fkl' onclick='showP(this)'>Fakelib</button>");
@@ -999,6 +998,9 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         /* raw panel accessible via button in backup section, no sidebar tab */
         H("<button type='button' data-p='raw' onclick='showP(this)' style='display:none'></button>");
         H("</nav><div class='content'>");
+        H("<div style='text-align:right;margin-bottom:8px;'>"
+          "<button type='submit' class='submit' style='padding:6px 16px;font-size:.8rem;'>%s</button></div>",
+          L(LS_SAVE));
 
         /* Panel: General / Notifications */
         H("<div id='panel-gen' class='panel'><div class='section'>");
@@ -1063,8 +1065,9 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           L(LS_DELAY_SEC),has_autoremove?"display:none;":"",cfg.auto_remove_missing_delay_seconds);
         H("</div></div></div>"); /* close section + ar-wrap + panel-auto */
 
-        /* Panel: Mounting */
+        /* Panel: Mounting / Scan */
         H("<div id='panel-mnt' class='panel active'><div class='section'>");
+        H("<div class='sublist-title'>Mounting</div>");
         SW("ro","mount_read_only",L(LS_READ_ONLY),cfg.mount_read_only);
         SW("fm","force_mount",L(LS_MOUNT_DAMAGED),cfg.force_mount);
         H("<p class='hint' style='margin:-4px 0 10px;'>&#9888; %s</p>",L(LS_FORCE_HINT));
@@ -1076,11 +1079,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
               "<label class='switch' for='pim'></label></div>",cfg.persistent_image_mounts?"checked":"");
         }
         SW("aia","app_install_all",L(LS_BATCH_REG),cfg.app_install_all);
-        H("</div></div>");
-
-
-        /* Panel: Scan */
-        H("<div id='panel-scn' class='panel'><div class='section'>");
+        H("<div class='sublist-title' style='margin-top:20px;'>Scan</div>");
         H("<div class='numfield'><label>%s</label>"
           "<select name='scan_depth'>"
           "<option value='1'%s>1 &mdash; %s</option>"
@@ -1092,12 +1091,9 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           cfg.scan_depth==2?" selected":"",
           L(LS_DEPTH_2));
         NF("scan_interval_seconds",L(LS_SCAN_INTV),"1","3600",cfg.scan_interval_seconds);
-        NF("stability_wait_seconds",
-           L(LS_STAB_WAIT),
-           "0","3600",cfg.stability_wait_seconds);
+        NF("stability_wait_seconds",L(LS_STAB_WAIT),"0","3600",cfg.stability_wait_seconds);
         H("<div class='sublist-title' style='margin-top:16px;'>%s</div>",L(LS_SCAN_PATHS));
-        H("<p class='hint' style='margin-bottom:8px;'>&#9432; %s</p>",
-          L(LS_SCANPATH_HINT));
+        H("<p class='hint' style='margin-bottom:8px;'>&#9432; %s</p>",L(LS_SCANPATH_HINT));
         H("<div id='paths-list'>");
         for(int i=0;i<cfg.path_count;i++)
             H("<div class='path-row'><input type='text' name='paths[]' value='%s' placeholder='/data/homebrew'><button type='button' class='rm' onclick='this.parentElement.remove()'>&times;</button></div>",cfg.scanpaths[i]);

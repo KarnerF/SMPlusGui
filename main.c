@@ -1553,7 +1553,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "if(btn)btn.textContent=nm+' \u25bc';"
           "fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},"
           "body:'preferred_elf='+encodeURIComponent(path)});}"
-          "var eb=document.getElementById('as-elf-btn');"
+          "function onAS(){var cb=document.getElementById('as-chk');"
           "var willOn=!cb.checked;" /* onclick fires before checked toggles */
           "if(willOn&&(!eb||eb.style.display==='none')){"
           "cb.checked=false;" /* prevent toggle until ELF picked */

@@ -1091,7 +1091,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
             "color:var(--dim);padding:5px 12px;cursor:pointer;font-family:var(--mono);font-size:.8rem;'>%s &#9660;</button></div>",
             L(LS_PREF_ELF), elfname);
           H("<div class='sublist-title' style='margin-top:16px;'>%s</div>",L(LS_EXTRA_SCAN));
-          H("<p class='hint' style='margin-bottom:8px;'>&#9432; Default: <code>/data/pldmgr/payloads/*/</code>, <code>/data/shadowmount/</code>, <code>/mnt/usb0-7/</code></p>");
+          H("<p class='hint' style='margin-bottom:8px;'>&#9432; %s</p>",L(LS_SCAN_DEF_HINT));
           H("<div id='extra-scan-list'>");
           for(int i=0;i<prefs.extra_scan_count;i++)
               H("<div class='path-row'><input type='text' value='%s' placeholder='/mnt/usb0' onchange='saveExtraScan()'>"

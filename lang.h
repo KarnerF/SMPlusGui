@@ -123,7 +123,8 @@ typedef enum {
     LS_PREF_ELF = 111,
     LS_COMPAT = 112,
     LS_EXTRA_SCAN = 113,
-    LS_COUNT = 114
+    LS_SCAN_DEF_HINT = 114,
+    LS_COUNT = 115
 } LangStrId;
 
 static int ui_lang = LANG_EN;
@@ -244,6 +245,7 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "Bevorzugte ELF",
         "Kompatibilit\u00e4t",
         "Zus\u00e4tzliche Scan-Verzeichnisse",
+        "Standard: /data/pldmgr/payloads/*/, /data/shadowmount/, /mnt/usb0/ (nur erstes USB)",
     },
     /* EN */ {
         "running",
@@ -359,6 +361,7 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "Preferred ELF",
         "Compatibility",
         "Additional scan directories",
+        "Default: /data/pldmgr/payloads/*/, /data/shadowmount/, /mnt/usb0/ (first USB only)",
     },
     /* FR */ {
         "actif",
@@ -475,6 +478,7 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "ELF pr\u00e9f\u00e9r\u00e9",
         "Compatibilit\u00e9",
         "R\u00e9pertoires d'analyse suppl\u00e9mentaires",
+        "D\u00e9faut : /data/pldmgr/payloads/*/, /data/shadowmount/, /mnt/usb0/ (premier USB)",
     },
     /* ES */ {
         "activo",
@@ -591,6 +595,7 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "ELF preferido",
         "Compatibilidad",
         "Directorios de an\u00e1lisis adicionales",
+        "Predeterminado: /data/pldmgr/payloads/*/, /data/shadowmount/, /mnt/usb0/ (solo primer USB)",
     }
 };
 

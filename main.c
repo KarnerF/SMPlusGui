@@ -955,14 +955,12 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "<a href='/setlang?l=fr' class='%s'>FR</a>"
           "<a href='/setlang?l=es' class='%s'>ES</a>"
           "</div>"
-          "<button type='submit' class='submit' style='padding:5px 14px;font-size:.75rem;'>%s</button>"
           "</div>",
           is_auto?"active":"",
           !is_auto&&strcmp(lang,"de")==0?"active":"",
           !is_auto&&strcmp(lang,"en")==0?"active":"",
           !is_auto&&strcmp(lang,"fr")==0?"active":"",
-          !is_auto&&strcmp(lang,"es")==0?"active":"",
-          L(LS_SAVE));
+          !is_auto&&strcmp(lang,"es")==0?"active":"");
 
 
         /* Warnung bei veralteter Version (< 1.6beta16) */
@@ -991,7 +989,8 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         H("<div class='nav-sep'></div>");
         H("<button type='button' class='nav-item' data-p='kst' onclick='showP(this)'>kstuff</button>");
         H("<button type='button' class='nav-item' data-p='fkl' onclick='showP(this)'>Fakelib</button>");
-        H("<button type='button' class='nav-item' data-p='bkd' onclick='showP(this)'>Backend / API</button>");
+        H("<button type='button' class='nav-item' data-p='bkd' onclick='showP(this)'>Backend</button>");
+        H("<button type='button' class='nav-item' data-p='api' onclick='showP(this)'>API</button>");
         H("<button type='button' class='nav-item' data-p='sys' onclick='showP(this)'>Config</button>");
         H("<div class='nav-sep'></div>");
         H("<button type='button' class='nav-item' data-p='ovi' onclick='showP(this)'>%s</button>",L(LS_IMG_OVERRIDES));
@@ -1184,10 +1183,10 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           for(int t=50;t<=91;t++)
               H("<option value='%d'%s>%d&deg;C</option>",t,cur==t?" selected":"",t); }
         H("</select></div></div>");
-        H("</div>"); /* close backend section, panel-bkd stays open */
-        /* API section inside panel-bkd */
-        H("<div id='api-wrap' style='opacity:%s;pointer-events:%s'><div class='section'>"
-          "<div class='sublist-title' style='margin-top:4px;'>API</div>",
+        H("</div></div>"); /* close backend section + panel-bkd */
+
+        /* Panel: API */
+        H("<div id='panel-api' class='panel'><div id='api-wrap' style='opacity:%s;pointer-events:%s'><div class='section'>",
           has_api?"1":"0.35",has_api?"auto":"none");
         if(!has_api)
             H("<p style='margin:0 0 14px;'><span id='api-badge' class='vbadge'>ab 1.7alpha3</span></p>");
@@ -1204,7 +1203,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           strcmp(cfg.api_bind_address,"0.0.0.0")==0?" selected":"",
           L(LS_ALL_IFACES));
         NF("api_port",L(LS_PORT),"1","65535",cfg.api_port);
-        H("</div></div></div>"); /* close api-wrap + section + panel-bkd */
+        H("</div></div></div>"); /* close api-wrap + section + panel-api */
 
         /* Panel: Config/Backup */
         { const char *bdir=BAK_DIR;

@@ -953,12 +953,15 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "<a href='/setlang?l=en' class='%s'>EN</a>"
           "<a href='/setlang?l=fr' class='%s'>FR</a>"
           "<a href='/setlang?l=es' class='%s'>ES</a>"
-          "</div></div>",
+          "</div>"
+          "<button type='submit' class='submit' style='padding:6px 18px;font-size:.82rem;'>%s</button>"
+          "</div>",
           is_auto?"active":"",
           !is_auto&&strcmp(lang,"de")==0?"active":"",
           !is_auto&&strcmp(lang,"en")==0?"active":"",
           !is_auto&&strcmp(lang,"fr")==0?"active":"",
-          !is_auto&&strcmp(lang,"es")==0?"active":"");
+          !is_auto&&strcmp(lang,"es")==0?"active":"",
+          L(LS_SAVE));
 
 
         /* Warnung bei veralteter Version (< 1.6beta16) */
@@ -985,8 +988,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         H("<button type='button' class='nav-item active' data-p='mnt' onclick='showP(this)'>Mounting / Scan</button>");
         H("<button type='button' class='nav-item' data-p='auto' onclick='showP(this)'>Autostart / Auto-Remove</button>");
         H("<div class='nav-sep'></div>");
-        H("<button type='button' class='nav-item' data-p='kst' onclick='showP(this)'>kstuff</button>");
-        H("<button type='button' class='nav-item' data-p='fkl' onclick='showP(this)'>Fakelib</button>");
+        H("<button type='button' class='nav-item' data-p='kst' onclick='showP(this)'>kstuff / Fakelib</button>");
         H("<button type='button' class='nav-item' data-p='bkd' onclick='showP(this)'>Backend / API</button>");
         H("<button type='button' class='nav-item' data-p='sys' onclick='showP(this)'>Config</button>");
         H("<div class='nav-sep'></div>");
@@ -997,9 +999,6 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         /* raw panel accessible via button in backup section, no sidebar tab */
         H("<button type='button' data-p='raw' onclick='showP(this)' style='display:none'></button>");
         H("</nav><div class='content'>");
-        H("<div style='text-align:right;margin-bottom:8px;'>"
-          "<button type='submit' class='submit' style='padding:6px 16px;font-size:.8rem;'>%s</button></div>",
-          L(LS_SAVE));
 
         /* Panel: General / Notifications */
         H("<div id='panel-gen' class='panel'><div class='section'>");
@@ -1119,10 +1118,9 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         for(int i=0;i<cfg.kstuff_delay_count;i++)
             H("<div class='path-row'><input type='text' name='kstuff_delay[]' value='%s' placeholder='PPSA12345:30'><button type='button' class='rm' onclick='this.parentElement.remove()'>&times;</button></div>",cfg.kstuff_delay[i]);
         H("</div><button type='button' class='addbtn' onclick='addRow(\"kstuff-dl-list\",\"kstuff_delay[]\",\"PPSA12345:30\")'>+ kstuff_delay</button>");
-        H("</div></div>");
-
-        /* Panel: Fakelib */
-        H("<div id='panel-fkl' class='panel'><div class='section'>");
+        H("</div>"); /* close kstuff section, panel-kst stays open */
+        /* Fakelib section inside panel-kst */
+        H("<div class='section'><div class='sublist-title'>Fakelib</div>");
         SW("bf","backport_fakelib",L(LS_EN_BACKPORT),cfg.backport_fakelib);
         SW("gf","global_fakelib",L(LS_EN_GLOBAL_FL),cfg.global_fakelib);
         H("<p class='hint' style='margin:-4px 0 10px;'>&#9432; %s</p>",L(LS_FAKELIB_HINT));
@@ -1143,7 +1141,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         for(int i=0;i<cfg.global_fakelib_exclude_count;i++)
             H("<div class='path-row'><input type='text' name='global_fakelib_exclude[]' value='%s' placeholder='PPSA12345'><button type='button' class='rm' onclick='this.parentElement.remove()'>&times;</button></div>",cfg.global_fakelib_exclude[i]);
         H("</div><button type='button' class='addbtn' onclick='addRow(\"fakelib-ex-list\",\"global_fakelib_exclude[]\",\"PPSA12345\")'>+ global_fakelib_exclude</button>");
-        H("</div></div>");
+        H("</div></div>"); /* close fakelib section + panel-kst */
 
         /* Panel: Backend */
         H("<div id='panel-bkd' class='panel'><div class='section'>");

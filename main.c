@@ -47,7 +47,7 @@ static void _notify_send(const char *title, const char *sub) {
             "{\"rawData\":{\"viewTemplateType\":\"InteractiveToastTemplateB\","
             "\"channelType\":\"Downloads\",\"useCaseId\":\"IDC\","
             "\"toastOverwriteType\":\"No\",\"isImmediate\":true,\"priority\":100,"
-            "\"viewData\":{\"icon\":{\"type\":\"Url\",\"parameters\":{\"url\":\"/user/app/PPSX99998/sce_sys/icon0.png\"}},"
+            "\"viewData\":{\"icon\":{\"type\":\"Url\",\"parameters\":{\"url\":\"/user/app/SMPL00001/sce_sys/icon0.png\"}},"
             "\"message\":{\"body\":\"%s\"},\"subMessage\":{\"body\":\"%s\"}}},"
             "\"createdDateTime\":\"2025-01-01T00:00:00.000Z\","
             "\"localNotificationId\":\"%s\"}",

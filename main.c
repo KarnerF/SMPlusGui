@@ -1051,15 +1051,14 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
             "<label class='switch' for='as-chk' onclick='onAS()'></label></div>",
             L(LS_AUTOSTART), prefs.auto_start?" checked":"");
           H("<div class='numfield' style='margin-top:12px;'><label>%s</label>"
-            "<div style='display:flex;gap:6px;'>"
             "<button type='button' id='as-elf-btn' onclick='pickASElf()' "
             "style='background:transparent;border:1px solid var(--border);border-radius:6px;"
-            "color:var(--dim);padding:5px 12px;cursor:pointer;font-family:var(--mono);font-size:.8rem;white-space:nowrap;'>%s &#9660;</button>"
+            "color:var(--dim);padding:5px 12px;cursor:pointer;font-family:var(--mono);font-size:.8rem;'>%s &#9660;</button></div>"
+            "<div class='numfield' style='margin-top:8px;'><label>Custom path</label>"
             "<input type='text' id='as-custom-path' placeholder='/data/pldmgr/payloads/shadowmount/shadowmount.elf'"
-            " style='flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;"
+            " style='width:100%%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;"
             "color:var(--text);padding:5px 10px;font-family:var(--mono);font-size:.75rem;'"
-            " value='%s' onchange='setASCustomPath(this.value)'>"
-            "</div></div>",
+            " value='%s' onchange='setASCustomPath(this.value)'></div>",
             L(LS_PREF_ELF), elfname, prefs.preferred_elf);
           H("</div></div>"); } /* close autostart section + panel-auto */
 

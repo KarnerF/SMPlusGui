@@ -1051,7 +1051,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           const char *elfname="ELF w\u00e4hlen";
           if(prefs.preferred_elf[0]){const char *sl=strrchr(prefs.preferred_elf,'/');elfname=sl?sl+1:prefs.preferred_elf;}
           H("<div id='panel-ast' class='panel'><div class='section'>");
-          H("<div class='badge'><span class='badge-dot'></span>AUTOSTART</div>");
+          H("<div class='sublist-title'>AUTOSTART</div>");
           H("<div class='row'><label>%s</label>"
             "<input type='checkbox' id='as-chk' style='display:none;'%s>"
             "<label class='switch' for='as-chk' onclick='onAS()'></label></div>",

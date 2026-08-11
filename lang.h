@@ -245,7 +245,7 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "Bevorzugte ELF",
         "Kompatibilit\u00e4t",
         "Zus\u00e4tzliche Scan-Verzeichnisse",
-        "Standard: /data/pldmgr/payloads/*/, /data/shadowmount/, /mnt/usb0/ (nur erstes USB)",
+        "Standard: /data/pldmgr/payloads/*/, /data/shadowmount/, /mnt/usb0-7/ \u2014 sucht shadowmount*.elf / shadowmountplus*.elf",
     },
     /* EN */ {
         "running",
@@ -361,7 +361,7 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "Preferred ELF",
         "Compatibility",
         "Additional scan directories",
-        "Default: /data/pldmgr/payloads/*/, /data/shadowmount/, /mnt/usb0/ (first USB only)",
+        "Default: /data/pldmgr/payloads/*/, /data/shadowmount/, /mnt/usb0-7/ \u2014 searches shadowmount*.elf / shadowmountplus*.elf",
     },
     /* FR */ {
         "actif",
@@ -478,7 +478,7 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "ELF pr\u00e9f\u00e9r\u00e9",
         "Compatibilit\u00e9",
         "R\u00e9pertoires d'analyse suppl\u00e9mentaires",
-        "D\u00e9faut : /data/pldmgr/payloads/*/, /data/shadowmount/, /mnt/usb0/ (premier USB)",
+        "D\u00e9faut : /data/pldmgr/payloads/*/, /data/shadowmount/, /mnt/usb0-7/ \u2014 cherche shadowmount*.elf / shadowmountplus*.elf",
     },
     /* ES */ {
         "activo",
@@ -595,7 +595,7 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "ELF preferido",
         "Compatibilidad",
         "Directorios de an\u00e1lisis adicionales",
-        "Predeterminado: /data/pldmgr/payloads/*/, /data/shadowmount/, /mnt/usb0/ (solo primer USB)",
+        "Predeterminado: /data/pldmgr/payloads/*/, /data/shadowmount/, /mnt/usb0-7/ \u2014 busca shadowmount*.elf / shadowmountplus*.elf",
     }
 };
 

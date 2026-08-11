@@ -1045,8 +1045,8 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
             "style='background:transparent;border:1px solid var(--border);border-radius:6px;"
             "color:var(--dim);padding:5px 12px;cursor:pointer;font-family:var(--mono);font-size:.8rem;text-align:left;'>%s &#9660;</button></div>",
             L(LS_PREF_ELF), elfname);
-          H("</div></div>"); }
-        /* Auto-Remove section in Auto panel */
+          H("</div>"); } /* close autostart section only, panel-auto stays open */
+        /* Auto-Remove section inside panel-auto */
         H("<div id='ar-wrap' style='opacity:%s;pointer-events:%s'>"
           "<div class='section'><div class='sublist-title'>Auto-Remove</div>",has_autoremove?"1":"0.35",has_autoremove?"auto":"none");
         H("<div class='row'><label for='arm'>%s <span class='ar-b vbadge' style='%s'>ab 1.7alpha3</span></label>"
@@ -1060,7 +1060,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         H("<div class='numfield'><label>%s <span style='font-size:.7rem;color:var(--dim);font-weight:normal;'>(1\u201386400)</span> <span class='ar-b vbadge' style='%s'>ab 1.7alpha3</span></label>"
           "<input type='number' name='auto_remove_missing_delay_seconds' min='1' max='86400' value='%d'></div>",
           L(LS_DELAY_SEC),has_autoremove?"display:none;":"",cfg.auto_remove_missing_delay_seconds);
-        H("</div></div>"); /* close ar-wrap + section */
+        H("</div></div></div>"); /* close section + ar-wrap + panel-auto */
 
         /* Panel: Mounting */
         H("<div id='panel-mnt' class='panel active'><div class='section'>");

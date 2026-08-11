@@ -792,8 +792,6 @@ static void *sm_memmem(const void *haystack, size_t hlen, const void *needle, si
 }
 
 /* pending ELF — set by /api/sm/start, sent on next poll to avoid blocking browser */
-static char g_pending_elf[SM_EPATH] = {0};
-
 static int send_elf_to_elfldr(const char *path) {
     FILE *elf = fopen(path,"rb"); if(!elf) return -1;
     int ports[]={9021,9020,0}; int sock=-1;

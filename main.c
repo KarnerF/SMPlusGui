@@ -986,8 +986,10 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         H("<button type='button' class='nav-item' data-p='auto' onclick='showP(this)'>Auto</button>");
         H("<button type='button' class='nav-item' data-p='scn' onclick='showP(this)'>Scan</button>");
         H("<div class='nav-sep'></div>");
-        H("<button type='button' class='nav-item' data-p='compat' onclick='showP(this)'>kstuff / Fakelib</button>");
-        H("<button type='button' class='nav-item' data-p='srv' onclick='showP(this)'>Backend / API</button>");
+        H("<button type='button' class='nav-item' data-p='kst' onclick='showP(this)'>kstuff</button>");
+        H("<button type='button' class='nav-item' data-p='fkl' onclick='showP(this)'>Fakelib</button>");
+        H("<button type='button' class='nav-item' data-p='bkd' onclick='showP(this)'>Backend</button>");
+        H("<button type='button' class='nav-item' data-p='api' onclick='showP(this)'>API</button>");
         H("<button type='button' class='nav-item' data-p='sys' onclick='showP(this)'>Config</button>");
         H("<div class='nav-sep'></div>");
         H("<button type='button' class='nav-item' data-p='ovi' onclick='showP(this)'>%s</button>",L(LS_IMG_OVERRIDES));
@@ -1101,9 +1103,9 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         H("</div><button type='button' class='addbtn' onclick='addPath()'>+ %s</button>",L(LS_ADD_PATH));
         H("</div></div>");
 
-        /* Panel: kstuff + Fakelib → Kompatibilität */
-        H("<div id='panel-compat' class='panel'><div class='section'>");
-        H("<div class='sublist-title'>kstuff</div>");
+        /* Panel: kstuff */
+        H("<div id='panel-kst' class='panel'><div class='section'>");
+        SW("kgt","kstuff_game_auto_toggle",L(LS_KSTUFF_PAUSE),cfg.kstuff_game_auto_toggle);
         SW("kcd","kstuff_crash_detection",L(LS_CRASH_TUNE),cfg.kstuff_crash_detection);
         H("<p class='hint' style='margin:-4px 0 10px;'>&#9432; %s</p>",L(LS_KSTUFF_TOG));
         NF("kstuff_pause_delay_image_seconds",L(LS_PAUSE_IMG),"1","3600",cfg.kstuff_pause_delay_image_seconds);
@@ -1122,9 +1124,9 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
             H("<div class='path-row'><input type='text' name='kstuff_delay[]' value='%s' placeholder='PPSA12345:30'><button type='button' class='rm' onclick='this.parentElement.remove()'>&times;</button></div>",cfg.kstuff_delay[i]);
         H("</div><button type='button' class='addbtn' onclick='addRow(\"kstuff-dl-list\",\"kstuff_delay[]\",\"PPSA12345:30\")'>+ kstuff_delay</button>");
         H("</div></div>");
-        /* Fakelib section */
-        H("<div class='section'><div class='sublist-title'>Fakelib</div>");
 
+        /* Panel: Fakelib */
+        H("<div id='panel-fkl' class='panel'><div class='section'>");
         SW("bf","backport_fakelib",L(LS_EN_BACKPORT),cfg.backport_fakelib);
         SW("gf","global_fakelib",L(LS_EN_GLOBAL_FL),cfg.global_fakelib);
         H("<p class='hint' style='margin:-4px 0 10px;'>&#9432; %s</p>",L(LS_FAKELIB_HINT));
@@ -1145,11 +1147,10 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         for(int i=0;i<cfg.global_fakelib_exclude_count;i++)
             H("<div class='path-row'><input type='text' name='global_fakelib_exclude[]' value='%s' placeholder='PPSA12345'><button type='button' class='rm' onclick='this.parentElement.remove()'>&times;</button></div>",cfg.global_fakelib_exclude[i]);
         H("</div><button type='button' class='addbtn' onclick='addRow(\"fakelib-ex-list\",\"global_fakelib_exclude[]\",\"PPSA12345\")'>+ global_fakelib_exclude</button>");
-        H("</div></div></div>");
+        H("</div></div>");
 
-        /* Panel: Backend + API → Server */
-        H("<div id='panel-srv' class='panel'><div class='section'>");
-        H("<div class='sublist-title'>Backend</div>");
+        /* Panel: Backend */
+        H("<div id='panel-bkd' class='panel'><div class='section'>");
         H("<p class='hint' style='margin-bottom:12px;'>&#9432; %s</p>",
           L(LS_SECTOR_HINT));
         H("<div class='numfield'><label>%s</label>"
@@ -1363,7 +1364,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           H("</div></div>"); }
 
         /* Panel: API — ab SM v1.7alpha3 */
-        H("<div id='api-wrap' style='opacity:%s;pointer-events:%s'><div class='section'><div class='sublist-title'>API</div>",
+        H("<div id='panel-api' class='panel'><div id='api-wrap' style='opacity:%s;pointer-events:%s'><div class='section'>",
           has_api?"1":"0.35",has_api?"auto":"none");
         if(!has_api)
             H("<p style='margin:0 0 14px;'><span id='api-badge' class='vbadge'>ab 1.7alpha3</span></p>");
@@ -1380,7 +1381,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           strcmp(cfg.api_bind_address,"0.0.0.0")==0?" selected":"",
           L(LS_ALL_IFACES));
         NF("api_port",L(LS_PORT),"1","65535",cfg.api_port);
-        H("</div></div></div></div>"); /* close api-wrap + section + panel-srv */
+        H("</div></div></div>"); /* close api */
         H("<div id='panel-ovi' class='panel'><div class='section'>");
         H("<div class='sublist-title'>image_ro</div>");
         H("<p class='hint'><b>&#128196; Beispiel:</b> &nbsp;<code>PPSA12345.exfat</code> &nbsp;%s&nbsp; <code>PPSA12345.ffpfs</code></p>",L(LS_OR));

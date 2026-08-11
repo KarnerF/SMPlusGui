@@ -756,6 +756,9 @@ static int is_valid_sm_cfg(const char *buf, size_t len){
 }
 
 /* Returns 0 on success, -1 elf not found, -2 elfldr not reachable, -3 send error */
+/* pending ELF — set by /api/sm/start, sent on next poll to avoid blocking browser */
+static char g_pending_elf[SM_EPATH] = {0};
+
 static int send_elf_to_elfldr(const char *path) {
     FILE *elf = fopen(path,"rb"); if(!elf) return -1;
     int ports[]={9021,9020,0}; int sock=-1;
@@ -2065,11 +2068,11 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
             char elfs[SM_MAX_ELFS][SM_EPATH];
             if(sm_find_elfs(elfs)>0) strncpy(elf_path,elfs[0],SM_EPATH-1);
         }
-        int r = send_elf_to_elfldr(elf_path);
-        if(r==-1){ notify(en?"SM ELF not found":"SM ELF nicht gefunden"); mg_http_reply(c,200,"Content-Type: application/json\r\nCache-Control: no-cache\r\n","{\"ok\":false,\"err\":\"elf_not_found\"}"); return; }
-        if(r==-2){ notify(en?"elfldr not reachable (Port 9021/9020)":"elfldr nicht erreichbar (Port 9021/9020)"); mg_http_reply(c,200,"Content-Type: application/json\r\nCache-Control: no-cache\r\n","{\"ok\":false,\"err\":\"elfldr_not_reachable\"}"); return; }
+        if(!elf_path[0]){ notify(en?"SM ELF not found":"SM ELF nicht gefunden"); mg_http_reply(c,200,"Content-Type: application/json\r\nCache-Control: no-cache\r\n","{\"ok\":false,\"err\":\"elf_not_found\"}"); return; }
+        /* respond immediately — actual send happens on next poll to avoid blocking browser */
+        strncpy(g_pending_elf, elf_path, SM_EPATH-1);
         /* do NOT save preferred ELF here — managed by auto-start panel only */
-        mg_http_reply(c,200,"Content-Type: application/json\r\nCache-Control: no-cache\r\n","{\"ok\":%s}",r==0?"true":"false");
+        mg_http_reply(c,200,"Content-Type: application/json\r\nCache-Control: no-cache\r\n","{\"ok\":true}");
     }
     else if(mg_match(hm->uri,mg_str("/api/config/backup"),NULL)){
         const char *bdir=BAK_DIR;
@@ -2562,6 +2565,7 @@ int payload_main(void) {
     int polls=0, as_done=0;
     while(1){
         mg_mgr_poll(&mgr,1000); usleep(100000);
+        if(g_pending_elf[0]){ send_elf_to_elfldr(g_pending_elf); g_pending_elf[0]=0; }
         if(++polls==3) smplus_install_if_needed();
         if(polls==2 && !as_done){ /* ~2s after start */
             as_done=1;

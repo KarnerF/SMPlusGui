@@ -1183,8 +1183,8 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           for(int t=50;t<=91;t++)
               H("<option value='%d'%s>%d&deg;C</option>",t,cur==t?" selected":"",t); }
         H("</select></div></div>");
-        H("</div></div>");
-        /* API section merged into panel-bkd */
+        H("</div>"); /* close backend section, panel-bkd stays open */
+        /* API section inside panel-bkd */
         H("<div id='api-wrap' style='opacity:%s;pointer-events:%s'><div class='section'>"
           "<div class='sublist-title' style='margin-top:4px;'>API</div>",
           has_api?"1":"0.35",has_api?"auto":"none");

@@ -783,6 +783,14 @@ static int is_valid_sm_cfg(const char *buf, size_t len){
 }
 
 /* Returns 0 on success, -1 elf not found, -2 elfldr not reachable, -3 send error */
+/* memmem is not in PS5 SDK */
+static void *sm_memmem(const void *haystack, size_t hlen, const void *needle, size_t nlen) {
+    if(!nlen) return (void*)haystack;
+    const char *h=(const char*)haystack, *n=(const char*)needle;
+    for(size_t i=0;i+nlen<=hlen;i++) if(memcmp(h+i,n,nlen)==0) return (void*)(h+i);
+    return NULL;
+}
+
 /* pending ELF — set by /api/sm/start, sent on next poll to avoid blocking browser */
 static char g_pending_elf[SM_EPATH] = {0};
 
@@ -1083,6 +1091,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
             "color:var(--dim);padding:5px 12px;cursor:pointer;font-family:var(--mono);font-size:.8rem;'>%s &#9660;</button></div>",
             L(LS_PREF_ELF), elfname);
           H("<div class='sublist-title' style='margin-top:16px;'>%s</div>",L(LS_EXTRA_SCAN));
+          H("<p class='hint' style='margin-bottom:8px;'>&#9432; Default: <code>/data/pldmgr/payloads/*/</code>, <code>/data/shadowmount/</code>, <code>/mnt/usb0-7/</code></p>");
           H("<div id='extra-scan-list'>");
           for(int i=0;i<prefs.extra_scan_count;i++)
               H("<div class='path-row'><input type='text' value='%s' placeholder='/mnt/usb0' onchange='saveExtraScan()'>"
@@ -2597,14 +2606,14 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         /* update extra_scan if present */
         char clr[4]={0}; mg_http_get_var(&hm->body,"extra_scan_clear",clr,sizeof(clr));
         if(clr[0]){ p.extra_scan_count=0; }
-        else if(memmem(hm->body.buf,hm->body.len,"extra_scan",10)){
+        else if(sm_memmem(hm->body.buf,hm->body.len,"extra_scan",10)){
             /* parse all extra_scan[]= entries from body */
             p.extra_scan_count=0;
             const char *key="extra_scan[]=";
             const char *pos=hm->body.buf;
             const char *end=hm->body.buf+hm->body.len;
             while(pos<end&&p.extra_scan_count<PREFS_MAX_EXTRA){
-                const char *found=(const char*)memmem(pos,end-pos,key,strlen(key));
+                const char *found=(const char*)sm_memmem(pos,end-pos,key,strlen(key));
                 if(!found) break;
                 const char *vstart=found+strlen(key);
                 const char *vend=(const char*)memchr(vstart,'&',end-vstart);

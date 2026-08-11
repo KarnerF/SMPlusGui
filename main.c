@@ -1198,10 +1198,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         H("<div id='panel-api' class='panel'><div id='api-wrap' style='opacity:%s;pointer-events:%s'><div class='section'>",
           has_api?"1":"0.35",has_api?"auto":"none");
         H("<div class='sublist-title'>API</div>");
-        if(!has_api)
-            H("<p style='margin:0 0 14px;'><span id='api-badge' class='vbadge'>ab 1.7alpha3</span></p>");
-        else
-            H("<span id='api-badge' class='vbadge' style='display:none;'>ab 1.7alpha3</span>");
+        H("<span id='api-badge' class='vbadge' style='display:none;'>ab 1.7alpha3</span>");
         H("<div class='numfield'><label>%s <span class='vbadge' style='%s'>ab 1.7alpha3</span></label>"
           "<select name='api_bind_address'>"
           "<option value='127.0.0.1'%s>127.0.0.1 &mdash; %s</option>"

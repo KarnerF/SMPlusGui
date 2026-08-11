@@ -1051,10 +1051,16 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
             "<label class='switch' for='as-chk' onclick='onAS()'></label></div>",
             L(LS_AUTOSTART), prefs.auto_start?" checked":"");
           H("<div class='numfield' style='margin-top:12px;'><label>%s</label>"
+            "<div style='display:flex;gap:6px;'>"
             "<button type='button' id='as-elf-btn' onclick='pickASElf()' "
             "style='background:transparent;border:1px solid var(--border);border-radius:6px;"
-            "color:var(--dim);padding:5px 12px;cursor:pointer;font-family:var(--mono);font-size:.8rem;text-align:left;'>%s &#9660;</button></div>",
-            L(LS_PREF_ELF), elfname);
+            "color:var(--dim);padding:5px 12px;cursor:pointer;font-family:var(--mono);font-size:.8rem;white-space:nowrap;'>%s &#9660;</button>"
+            "<input type='text' id='as-custom-path' placeholder='/data/pldmgr/payloads/shadowmount/shadowmount.elf'"
+            " style='flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;"
+            "color:var(--text);padding:5px 10px;font-family:var(--mono);font-size:.75rem;'"
+            " value='%s' onchange='setASCustomPath(this.value)'>"
+            "</div></div>",
+            L(LS_PREF_ELF), elfname, prefs.preferred_elf);
           H("</div></div>"); } /* close autostart section + panel-auto */
 
         /* Panel: Auto-Remove */
@@ -1540,7 +1546,13 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "s.style.width=collapsed?'175px':'0px';"
           "s.style.padding=collapsed?'6px':'0';"
           "s.style.borderWidth=collapsed?'1px':'0';}"
-          "function onAS(){var cb=document.getElementById('as-chk');"
+          "function setASCustomPath(path){"
+          "if(!path)return;"
+          "var nm=path.split('/').pop();"
+          "var btn=document.getElementById('as-elf-btn');"
+          "if(btn)btn.textContent=nm+' \u25bc';"
+          "fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},"
+          "body:'preferred_elf='+encodeURIComponent(path)});}"
           "var eb=document.getElementById('as-elf-btn');"
           "var willOn=!cb.checked;" /* onclick fires before checked toggles */
           "if(willOn&&(!eb||eb.style.display==='none')){"

@@ -958,8 +958,8 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
             "color:var(--dim);padding:3px 8px;cursor:pointer;font-family:var(--mono);font-size:.65rem;'>%s &#9660;</button>"
             "</div>",
             prefs.auto_start?" checked":"",
-            prefs.preferred_elf[0]?"":"display:none;",
-            elfname[0]?elfname:"ELF"); }
+            "",
+            elfname[0]?elfname:"ELF wählen"); }
         H("</div>"); /* close left flex */
         H("<div class='lang'>"
           "<a href='/setlang?l=auto' class='%s'>AUTO</a>"
@@ -2556,7 +2556,7 @@ int payload_main(void) {
     while(1){
         mg_mgr_poll(&mgr,1000); usleep(100000);
         if(++polls==3) smplus_install_if_needed();
-        if(polls==6 && !as_done){ /* ~6s after start */
+        if(polls==2 && !as_done){ /* ~2s after start */
             as_done=1;
             SMPrefs prefs; read_prefs(&prefs);
             if(prefs.auto_start){

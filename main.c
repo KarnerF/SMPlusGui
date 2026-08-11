@@ -1149,7 +1149,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         /* Panel: Backend */
         H("<div id='panel-bkd' class='panel'><div class='section'>");
         H("<div class='sublist-title'>Backend</div>");
-          L(LS_SECTOR_HINT));
+        H("<p class='hint' style='margin-bottom:12px;'>&#9432; %s</p>",L(LS_SECTOR_HINT));
         H("<div class='numfield'><label>%s</label>"
           "<select name='exfat_backend'>"
           "<option value='lvd'%s>lvd &mdash; /dev/lvdctl</option>"
@@ -1194,6 +1194,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         else
             H("<span id='api-badge' class='vbadge' style='display:none;'>ab 1.7alpha3</span>");
         H("<div class='sublist-title'>API</div>");
+        H("<div class='numfield'><label>%s</label>"
           "<select name='api_bind_address'>"
           "<option value='127.0.0.1'%s>127.0.0.1 &mdash; %s</option>"
           "<option value='0.0.0.0'%s>0.0.0.0 &mdash; %s</option>"

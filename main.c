@@ -1204,7 +1204,8 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           L(LS_ALL_IFACES));
         NF("api_port",L(LS_PORT),"1","65535",cfg.api_port);
         H("</div></div></div>"); /* close api-wrap + section + panel-bkd */
- — separate rows per source, no file limit */
+
+        /* Panel: Config/Backup */
         { const char *bdir=BAK_DIR;
           mkdir("/data/SMPlusGui",0755); mkdir(bdir,0755);
           /* collect and sort local backups */

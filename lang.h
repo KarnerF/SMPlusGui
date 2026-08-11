@@ -121,7 +121,8 @@ typedef enum {
     LS_CLEAR_LOG = 109,
     LS_AUTOSTART = 110,
     LS_PREF_ELF = 111,
-    LS_COUNT = 112
+    LS_COMPAT = 112,
+    LS_COUNT = 113
 } LangStrId;
 
 static int ui_lang = LANG_EN;
@@ -240,6 +241,7 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "Log l\u00f6schen",
         "Auto-Start",
         "Bevorzugte ELF",
+        "Kompatibilit\u00e4t",
     },
     /* EN */ {
         "running",
@@ -352,7 +354,8 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "Move local",
         "Move local",
         "Clear log",        "Auto-Start",
-        "Preferred ELF",    },
+        "Preferred ELF",
+        "Compatibility",    },
     /* FR */ {
         "actif",
         "inactif",
@@ -466,6 +469,7 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "Effacer le journal",
         "D\u00e9marrage auto",
         "ELF pr\u00e9f\u00e9r\u00e9",
+        "Compatibilit\u00e9",
     },
     /* ES */ {
         "activo",
@@ -580,6 +584,7 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "Borrar log",
         "Inicio autom\u00e1tico",
         "ELF preferido",
+        "Compatibilidad",
     }
 };
 

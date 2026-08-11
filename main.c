@@ -983,14 +983,11 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         H("<form action='/save' method='POST' onsubmit='try{doSave();}catch(e){}return false;'><div class='layout'>");
         H("<nav class='sidebar'>");
         H("<button type='button' class='nav-item active' data-p='mnt' onclick='showP(this)'>Mounting</button>");
-        H("<button type='button' class='nav-item' data-p='ast' onclick='showP(this)'>Autostart</button>");
+        H("<button type='button' class='nav-item' data-p='auto' onclick='showP(this)'>Auto</button>");
         H("<button type='button' class='nav-item' data-p='scn' onclick='showP(this)'>Scan</button>");
-        H("<button type='button' class='nav-item' data-p='arm' onclick='showP(this)'>Auto-Remove</button>");
         H("<div class='nav-sep'></div>");
-        H("<button type='button' class='nav-item' data-p='kst' onclick='showP(this)'>kstuff</button>");
-        H("<button type='button' class='nav-item' data-p='fkl' onclick='showP(this)'>Fakelib</button>");
-        H("<button type='button' class='nav-item' data-p='bkd' onclick='showP(this)'>Backend</button>");
-        H("<button type='button' class='nav-item' data-p='api' onclick='showP(this)'>API</button>");
+        H("<button type='button' class='nav-item' data-p='compat' onclick='showP(this)'>%s</button>",L(LS_COMPAT));
+        H("<button type='button' class='nav-item' data-p='srv' onclick='showP(this)'>Server</button>");
         H("<button type='button' class='nav-item' data-p='sys' onclick='showP(this)'>Config</button>");
         H("<div class='nav-sep'></div>");
         H("<button type='button' class='nav-item' data-p='ovi' onclick='showP(this)'>%s</button>",L(LS_IMG_OVERRIDES));
@@ -1036,7 +1033,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         { SMPrefs prefs; read_prefs(&prefs);
           const char *elfname="ELF w\u00e4hlen";
           if(prefs.preferred_elf[0]){const char *sl=strrchr(prefs.preferred_elf,'/');elfname=sl?sl+1:prefs.preferred_elf;}
-          H("<div id='panel-ast' class='panel'><div class='section'>");
+          H("<div id='panel-auto' class='panel'><div class='section'>");
           H("<div class='row'><label>%s</label>"
             "<input type='checkbox' id='as-chk' style='display:none;'%s>"
             "<label class='switch' for='as-chk' onclick='onAS()'></label></div>",
@@ -1047,6 +1044,23 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
             "color:var(--dim);padding:5px 12px;cursor:pointer;font-family:var(--mono);font-size:.8rem;text-align:left;'>%s &#9660;</button></div>",
             L(LS_PREF_ELF), elfname);
           H("</div></div>"); }
+        /* Auto-Remove section in Auto panel */
+        H("<div id='ar-wrap' style='opacity:%s;pointer-events:%s'>"
+          "<div class='section'><div class='sublist-title'>Auto-Remove</div>",has_autoremove?"1":"0.35",has_autoremove?"auto":"none");
+        H("<div class='row'><label for='arm'>%s <span class='ar-b vbadge' style='%s'>ab 1.7alpha3</span></label>"
+          "<input type='checkbox' id='arm' name='auto_remove_missing_games' value='1' %s>"
+          "<label class='switch' for='arm'></label></div>",
+          L(LS_RM_MISSING),has_autoremove?"display:none;":"",cfg.auto_remove_missing_games?"checked":"");
+        H("<div class='row'><label for='argd'>%s <span class='ar-b vbadge' style='%s'>ab 1.7alpha3</span></label>"
+          "<input type='checkbox' id='argd' name='auto_remove_games_with_dlc' value='1' %s>"
+          "<label class='switch' for='argd'></label></div>",
+          L(LS_RM_DLC),has_autoremove?"display:none;":"",cfg.auto_remove_games_with_dlc?"checked":"");
+        H("<div class='numfield'><label>%s <span style='font-size:.7rem;color:var(--dim);font-weight:normal;'>(1\u201386400)</span> <span class='ar-b vbadge' style='%s'>ab 1.7alpha3</span></label>"
+          "<input type='number' name='auto_remove_missing_delay_seconds' min='1' max='86400' value='%d'></div>",
+          L(LS_DELAY_SEC),has_autoremove?"display:none;":"",cfg.auto_remove_missing_delay_seconds);
+        H("</div></div></div>");
+
+        /* Panel: Mounting */
         H("<div id='panel-mnt' class='panel active'><div class='section'>");
         SW("ro","mount_read_only",L(LS_READ_ONLY),cfg.mount_read_only);
         SW("fm","force_mount",L(LS_MOUNT_DAMAGED),cfg.force_mount);
@@ -1087,32 +1101,9 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         H("</div><button type='button' class='addbtn' onclick='addPath()'>+ %s</button>",L(LS_ADD_PATH));
         H("</div></div>");
 
-        /* Panel: Auto-Remove */
-        H("<div id='panel-arm' class='panel'>"
-          "<div id='ar-wrap' style='opacity:%s;pointer-events:%s'>"
-          "<div class='section'>",has_autoremove?"1":"0.35",has_autoremove?"auto":"none");
-        H("<div class='row'><label for='arm'>%s <span class='ar-b vbadge' style='%s'>ab 1.7alpha3</span></label>"
-          "<input type='checkbox' id='arm' name='auto_remove_missing_games' value='1' %s>"
-          "<label class='switch' for='arm'></label></div>",
-          L(LS_RM_MISSING),
-          has_autoremove?"display:none;":"",
-          cfg.auto_remove_missing_games?"checked":"");
-        H("<div class='row'><label for='argd'>%s <span class='ar-b vbadge' style='%s'>ab 1.7alpha3</span></label>"
-          "<input type='checkbox' id='argd' name='auto_remove_games_with_dlc' value='1' %s>"
-          "<label class='switch' for='argd'></label></div>",
-          L(LS_RM_DLC),
-          has_autoremove?"display:none;":"",
-          cfg.auto_remove_games_with_dlc?"checked":"");
-        H("<div class='numfield'><label>%s <span style='font-size:.7rem;color:var(--dim);font-weight:normal;'>(1–86400)</span> <span class='ar-b vbadge' style='%s'>ab 1.7alpha3</span></label>"
-          "<input type='number' name='auto_remove_missing_delay_seconds' min='1' max='86400' value='%d'></div>",
-          L(LS_DELAY_SEC),
-          has_autoremove?"display:none;":"",
-          cfg.auto_remove_missing_delay_seconds);
-        H("</div></div></div>");
-
-        /* Panel: kstuff */
-        H("<div id='panel-kst' class='panel'><div class='section'>");
-        SW("kgt","kstuff_game_auto_toggle",L(LS_KSTUFF_PAUSE),cfg.kstuff_game_auto_toggle);
+        /* Panel: kstuff + Fakelib → Kompatibilität */
+        H("<div id='panel-compat' class='panel'><div class='section'>");
+        H("<div class='sublist-title'>kstuff</div>");
         SW("kcd","kstuff_crash_detection",L(LS_CRASH_TUNE),cfg.kstuff_crash_detection);
         H("<p class='hint' style='margin:-4px 0 10px;'>&#9432; %s</p>",L(LS_KSTUFF_TOG));
         NF("kstuff_pause_delay_image_seconds",L(LS_PAUSE_IMG),"1","3600",cfg.kstuff_pause_delay_image_seconds);
@@ -1131,9 +1122,9 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
             H("<div class='path-row'><input type='text' name='kstuff_delay[]' value='%s' placeholder='PPSA12345:30'><button type='button' class='rm' onclick='this.parentElement.remove()'>&times;</button></div>",cfg.kstuff_delay[i]);
         H("</div><button type='button' class='addbtn' onclick='addRow(\"kstuff-dl-list\",\"kstuff_delay[]\",\"PPSA12345:30\")'>+ kstuff_delay</button>");
         H("</div></div>");
+        /* Fakelib section */
+        H("<div class='section'><div class='sublist-title'>Fakelib</div>");
 
-        /* Panel: Fakelib */
-        H("<div id='panel-fkl' class='panel'><div class='section'>");
         SW("bf","backport_fakelib",L(LS_EN_BACKPORT),cfg.backport_fakelib);
         SW("gf","global_fakelib",L(LS_EN_GLOBAL_FL),cfg.global_fakelib);
         H("<p class='hint' style='margin:-4px 0 10px;'>&#9432; %s</p>",L(LS_FAKELIB_HINT));
@@ -1154,10 +1145,11 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         for(int i=0;i<cfg.global_fakelib_exclude_count;i++)
             H("<div class='path-row'><input type='text' name='global_fakelib_exclude[]' value='%s' placeholder='PPSA12345'><button type='button' class='rm' onclick='this.parentElement.remove()'>&times;</button></div>",cfg.global_fakelib_exclude[i]);
         H("</div><button type='button' class='addbtn' onclick='addRow(\"fakelib-ex-list\",\"global_fakelib_exclude[]\",\"PPSA12345\")'>+ global_fakelib_exclude</button>");
-        H("</div></div>");
+        H("</div></div></div>");
 
-        /* Panel: Backend */
-        H("<div id='panel-bkd' class='panel'><div class='section'>");
+        /* Panel: Backend + API → Server */
+        H("<div id='panel-srv' class='panel'><div class='section'>");
+        H("<div class='sublist-title'>Backend</div>");
         H("<p class='hint' style='margin-bottom:12px;'>&#9432; %s</p>",
           L(LS_SECTOR_HINT));
         H("<div class='numfield'><label>%s</label>"
@@ -1371,7 +1363,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           H("</div></div>"); }
 
         /* Panel: API — ab SM v1.7alpha3 */
-        H("<div id='panel-api' class='panel'><div id='api-wrap' style='opacity:%s;pointer-events:%s'><div class='section'>",
+        H("<div id='api-wrap' style='opacity:%s;pointer-events:%s'><div class='section'><div class='sublist-title'>API</div>",
           has_api?"1":"0.35",has_api?"auto":"none");
         if(!has_api)
             H("<p style='margin:0 0 14px;'><span id='api-badge' class='vbadge'>ab 1.7alpha3</span></p>");
@@ -1388,9 +1380,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           strcmp(cfg.api_bind_address,"0.0.0.0")==0?" selected":"",
           L(LS_ALL_IFACES));
         NF("api_port",L(LS_PORT),"1","65535",cfg.api_port);
-        H("</div></div></div>");
-
-        /* Panel: Image Overrides */
+        H("</div></div></div></div>"); /* close api-wrap + section + panel-srv */
         H("<div id='panel-ovi' class='panel'><div class='section'>");
         H("<div class='sublist-title'>image_ro</div>");
         H("<p class='hint'><b>&#128196; Beispiel:</b> &nbsp;<code>PPSA12345.exfat</code> &nbsp;%s&nbsp; <code>PPSA12345.ffpfs</code></p>",L(LS_OR));

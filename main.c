@@ -946,20 +946,6 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           sm_running ? "stop" : "start",
           sm_running ? "stop" : "start",
           sm_running ? "Stop" : "Start");
-        { SMPrefs prefs; read_prefs(&prefs);
-          const char *elfname="";
-          if(prefs.preferred_elf[0]){const char *sl=strrchr(prefs.preferred_elf,'/');elfname=sl?sl+1:prefs.preferred_elf;}
-          H("<div style='display:flex;align-items:center;gap:6px;margin-left:4px;'>"
-            "<span style='font-size:.72rem;color:var(--dim);'>Auto-Start</span>"
-            "<input type='checkbox' id='as-chk' style='display:none;'%s>"
-            "<label class='switch' for='as-chk' onclick='onAS()'></label>"
-            "<button type='button' id='as-elf-btn' onclick='pickASElf()' "
-            "style='%sbackground:transparent;border:1px solid var(--border);border-radius:6px;"
-            "color:var(--dim);padding:3px 8px;cursor:pointer;font-family:var(--mono);font-size:.65rem;'>%s &#9660;</button>"
-            "</div>",
-            prefs.auto_start?" checked":"",
-            "",
-            elfname[0]?elfname:"ELF wählen"); }
         H("</div>"); /* close left flex */
         H("<div class='lang'>"
           "<a href='/setlang?l=auto' class='%s'>AUTO</a>"

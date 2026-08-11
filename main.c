@@ -1920,7 +1920,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "if(_usbPrev!==null&&_usbPrev!==d.present)location.reload();"
           "_usbPrev=d.present;" /* sessionStorage keeps panel across USB reload */
           "}).catch(function(){if(_usbPrev===true)location.reload();});"
-          "},2000);"
+          "},5000);"
           "function filterLog(cat){"
           "_logFilter=cat;"
           "document.querySelectorAll('.lf-btn').forEach(function(b){"

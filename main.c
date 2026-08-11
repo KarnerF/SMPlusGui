@@ -1528,7 +1528,8 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "sessionStorage.setItem('panel',el.getAttribute('data-p'));"
           "if(el.getAttribute('data-p')==='log')refreshLog();"
           "if(el.getAttribute('data-p')==='raw'){rawLoad();}"
-          "window.scrollTo(0,0);}          /* restore panel after USB-triggered reload */
+          "window.scrollTo(0,0);}"
+          /* restore panel after USB-triggered reload */
           "var _rp=sessionStorage.getItem('panel');"
           "if(_rp){var _rb=document.querySelector('.nav-item[data-p=\"'+_rp+'\"]');if(_rb)showP(_rb);}"
           "function onAS(){var cb=document.getElementById('as-chk');"

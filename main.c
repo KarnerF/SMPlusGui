@@ -68,6 +68,29 @@ static void _notify_send(const char *title, const char *sub) {
 
 static void notify(const char *msg) { _notify_send(msg, NULL); }
 
+/* SMPlusGui own preferences (not SM config) */
+#define PREFS_PATH "/data/SMPlusGui/prefs.ini"
+typedef struct { int auto_start; char preferred_elf[512]; } SMPrefs;
+
+static void read_prefs(SMPrefs *p) {
+    memset(p, 0, sizeof(*p));
+    FILE *f = fopen(PREFS_PATH, "r"); if(!f) return;
+    char line[600];
+    while(fgets(line, sizeof(line), f)) {
+        line[strcspn(line,"\r\n")]=0;
+        if(strncmp(line,"auto_start=",11)==0) p->auto_start=atoi(line+11);
+        else if(strncmp(line,"preferred_elf=",14)==0) strncpy(p->preferred_elf,line+14,511);
+    }
+    fclose(f);
+}
+static void write_prefs(const SMPrefs *p) {
+    mkdir("/data/SMPlusGui",0755);
+    FILE *f = fopen(PREFS_PATH,"w"); if(!f) return;
+    fprintf(f,"auto_start=%d\n",p->auto_start);
+    fprintf(f,"preferred_elf=%s\n",p->preferred_elf);
+    fclose(f);
+}
+
 static void get_local_ip(char *buf, size_t buflen) {
     struct ifaddrs *ifap, *ifa;
     buf[0] = 0;
@@ -732,6 +755,32 @@ static int is_valid_sm_cfg(const char *buf, size_t len){
     return found>=2;
 }
 
+/* Returns 0 on success, -1 elf not found, -2 elfldr not reachable, -3 send error */
+static int send_elf_to_elfldr(const char *path) {
+    FILE *elf = fopen(path,"rb"); if(!elf) return -1;
+    int ports[]={9021,9020,0}; int sock=-1;
+    for(int pi=0;ports[pi];pi++){
+        int s=socket(AF_INET,SOCK_STREAM,0); if(s<0) continue;
+        struct timeval tv={5,0};
+        setsockopt(s,SOL_SOCKET,SO_SNDTIMEO,&tv,sizeof(tv));
+        setsockopt(s,SOL_SOCKET,SO_RCVTIMEO,&tv,sizeof(tv));
+        struct sockaddr_in sa; memset(&sa,0,sizeof(sa));
+        sa.sin_family=AF_INET; sa.sin_port=htons((uint16_t)ports[pi]);
+        sa.sin_addr.s_addr=inet_addr("127.0.0.1");
+        if(connect(s,(struct sockaddr*)&sa,sizeof(sa))==0){sock=s;break;}
+        close(s);
+    }
+    if(sock<0){fclose(elf);return -2;}
+    char buf[8192]; int err=0; size_t n;
+    while((n=fread(buf,1,sizeof(buf),elf))>0){
+        size_t off=0;
+        while(off<n){ssize_t s=send(sock,buf+off,n-off,0);if(s<=0){err=1;break;}off+=(size_t)s;}
+        if(err) break;
+    }
+    close(sock); fclose(elf);
+    return err ? -3 : 0;
+}
+
 static void fn(struct mg_connection *c, int ev, void *ev_data) {
     if(ev!=MG_EV_HTTP_MSG) return;
     struct mg_http_message *hm=(struct mg_http_message*)ev_data;
@@ -897,6 +946,17 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           sm_running ? "stop" : "start",
           sm_running ? "stop" : "start",
           sm_running ? "Stop" : "Start");
+        { SMPrefs prefs; read_prefs(&prefs);
+          H("<label style='display:flex;align-items:center;gap:5px;font-size:.72rem;color:var(--dim);cursor:pointer;margin-left:4px;'>"
+            "<input type='checkbox' id='auto-start-cb' onchange='saveAutoStart(this.checked)'%s> Auto-Start</label>",
+            prefs.auto_start?" checked":"");
+          H("<span id='pref-elf-lbl' style='font-family:var(--mono);font-size:.62rem;color:var(--dim);max-width:180px;"
+            "overflow:hidden;text-overflow:ellipsis;white-space:nowrap;%s' title='%s'>%s</span>",
+            prefs.preferred_elf[0]?"":"display:none;",
+            prefs.preferred_elf, prefs.preferred_elf[0] ? strrchr(prefs.preferred_elf,'/')? strrchr(prefs.preferred_elf,'/')+1 : prefs.preferred_elf : "");
+          H("<button type='button' id='pref-elf-clr' onclick='clearPrefElf()' style='%sdisplay:inline;background:transparent;"
+            "border:none;color:var(--dim);cursor:pointer;font-size:.75rem;padding:0 2px;' title='Clear preferred ELF'>&times;</button>",
+            prefs.preferred_elf[0]?"":"display:none!important;"); }
         H("</div>"); /* close left flex */
         H("<div class='lang'>"
           "<a href='/setlang?l=auto' class='%s'>AUTO</a>"
@@ -1466,7 +1526,13 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           /* restore panel after USB-triggered reload */
           "var _rp=sessionStorage.getItem('panel');"
           "if(_rp){var _rb=document.querySelector('.nav-item[data-p=\"'+_rp+'\"]');if(_rb)showP(_rb);}"
-          "function smVer(ver,maj,min,suf,num){""if(!ver)return false;""var m=ver.match(/^(\\d+)\\.(\\d+)(alpha|beta|test)?(\\d+)?/);""if(!m)return false;""var a=parseInt(m[1]),b=parseInt(m[2]),c=m[3]||'',d=parseInt(m[4]||'0');""if(a>maj)return true;if(a<maj)return false;""if(b>min)return true;if(b<min)return false;""var s={alpha:1,beta:2,test:3},vp=s[c]||4,mp=s[suf]||4;""if(vp>mp)return true;if(vp<mp)return false;""return d>=num;}""function refreshStatus(){""fetch('/api/status').then(r=>r.json()).then(d=>{""var c=document.getElementById('sm-status-chip');""if(!c)return;""var col=d.running?'#10b981':'#f87171';""c.innerHTML='<span style=\"width:7px;height:7px;border-radius:50%%;display:inline-block;background:'+col+';box-shadow:0 0 6px '+col+';'+(d.running?\"animation:pulse 2s infinite;\": \"\")+'\"></span> ShadowMount <b>'+d.status+'</b>';""var v=document.getElementById('sm-ver-chip');""if(v){v.style.display=(d.running&&d.version!=='nicht aktiv')?'flex':'none';""if(d.version!=='nicht aktiv')v.innerHTML='v <b>'+d.version+'</b>';}""var ver=d.version||'';""var ar=!d.running||smVer(ver,1,7,'alpha',3);""var pim=!d.running||smVer(ver,1,7,'alpha',4);""var as=document.getElementById('ar-wrap');""if(as){as.style.opacity=ar?\'1\':\'0.35\';as.style.pointerEvents=ar?\'auto\':\'none\';}""var ab=document.querySelectorAll('.ar-b');ab.forEach(function(e){e.style.display=ar?'none':'inline';});""var pb=document.getElementById('pim-badge');""if(pb)pb.style.display=pim?'none':'inline';""var pr=document.getElementById('pim-row');""if(pr)pr.style.opacity=pim?'1':'0.35';""if(pr)pr.style.pointerEvents=pim?'auto':'none';""var lb=document.getElementById('lang-badge');""if(lb)lb.style.display=pim?'none':'inline';""var lr=document.getElementById('lang-row');""if(lr)lr.style.opacity=pim?'1':'0.35';""if(lr)lr.style.pointerEvents=pim?'auto':'none';""var api=!d.running||smVer(ver,1,7,'alpha',3);""var aw=document.getElementById('api-wrap');""if(aw){aw.style.opacity=api?'1':'0.35';aw.style.pointerEvents=api?'auto':'none';}""var apib=document.getElementById('api-badge');""if(apib)apib.style.display=api?'none':'inline';""var fan=!d.running||smVer(ver,1,7,'alpha',5);""var fr=document.getElementById('fan-row');""if(fr){fr.style.opacity=fan?'1':'0.35';fr.style.pointerEvents=fan?'auto':'none';}""var fb=fr?fr.querySelector('.vbadge'):null;""if(fb)fb.style.display=fan?'none':'inline';""var cb=document.getElementById('sm-ctrl-btn');""if(cb){cb.setAttribute('data-action',d.running?'stop':'start');cb.className='sm-ctrl '+(d.running?'stop':'start');cb.textContent=d.running?'Stop':'Start';}""}).catch(()=>{});}""refreshStatus();""setInterval(refreshStatus,10000);""function smCtrl(){var btn=document.getElementById('sm-ctrl-btn');if(!btn)return;var action=btn.getAttribute('data-action');if(action==='stop'){btn.disabled=true;fetch('/api/sm/stop').then(function(){setTimeout(refreshStatus,1500);setTimeout(function(){btn.disabled=false;},2000);}).catch(function(){btn.disabled=false;});}else{btn.disabled=true;fetch('/api/sm/scan').then(function(r){return r.json();}).then(function(d){if(d.count===0){alert(_t.elf_nf);btn.disabled=false;}else if(d.count===1){launchElf(btn,d.paths[0]);}else{btn.disabled=false;showElfPicker(btn,d.paths);}}).catch(function(){btn.disabled=false;});}}""function launchElf(btn,path){if(btn)btn.disabled=true;fetch('/api/sm/start?path='+encodeURIComponent(path)).then(function(r){return r.json();}).then(function(){setTimeout(refreshStatus,3000);setTimeout(function(){if(btn)btn.disabled=false;},3000);}).catch(function(){if(btn)btn.disabled=false;});}""function showElfPicker(btn,paths){var old=document.getElementById('sm-elf-picker');if(old)old.remove();var picker=document.createElement('div');picker.id='sm-elf-picker';picker.style.cssText='position:fixed;top:0;left:0;width:100%%;height:100%%;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:9999;';var box=document.createElement('div');box.style.cssText='background:#0d111a;border:1px solid #1e2a42;border-radius:14px;padding:36px;min-width:500px;max-width:800px;';var title=document.createElement('p');title.style.cssText='margin:0 0 20px;font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:#64748b;font-family:monospace;';title.textContent=_t.sel_sm;box.appendChild(title);paths.forEach(function(p){var b=document.createElement('button');b.style.cssText='display:block;width:100%%;margin-bottom:10px;padding:16px 18px;border-radius:8px;border:1px solid #1e2a42;background:#131927;color:#e2e8f0;cursor:pointer;text-align:left;font-family:monospace;font-size:.75rem;word-break:break-all;';b.textContent=p;b.onclick=function(){picker.remove();launchElf(btn,p);};box.appendChild(b);});var cancel=document.createElement('button');cancel.style.cssText='display:block;width:100%%;padding:14px;border-radius:8px;border:1px solid #1e2a42;background:transparent;color:#64748b;cursor:pointer;font-family:monospace;font-size:.75rem;margin-top:6px;';cancel.textContent=_t.cancel;cancel.onclick=function(){picker.remove();};box.appendChild(cancel);picker.appendChild(box);document.body.appendChild(picker);}""document.querySelector('form').addEventListener('keydown',function(e){""if(e.key==='Enter'&&e.target.tagName!=='BUTTON')e.preventDefault();""});"
+          "function saveAutoStart(v){fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'auto_start='+(v?1:0)});}"
+          "function clearPrefElf(){fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'preferred_elf='}).then(function(){var l=document.getElementById('pref-elf-lbl'),b=document.getElementById('pref-elf-clr');if(l){l.style.display='none';l.textContent='';}if(b)b.style.display='none';});}"
+          "function smVer(ver,maj,min,suf,num){""if(!ver)return false;""var m=ver.match(/^(\\d+)\\.(\\d+)(alpha|beta|test)?(\\d+)?/);""if(!m)return false;""var a=parseInt(m[1]),b=parseInt(m[2]),c=m[3]||'',d=parseInt(m[4]||'0');""if(a>maj)return true;if(a<maj)return false;""if(b>min)return true;if(b<min)return false;""var s={alpha:1,beta:2,test:3},vp=s[c]||4,mp=s[suf]||4;""if(vp>mp)return true;if(vp<mp)return false;""return d>=num;}""function refreshStatus(){""fetch('/api/status').then(r=>r.json()).then(d=>{""var c=document.getElementById('sm-status-chip');""if(!c)return;""var col=d.running?'#10b981':'#f87171';""c.innerHTML='<span style=\"width:7px;height:7px;border-radius:50%%;display:inline-block;background:'+col+';box-shadow:0 0 6px '+col+';'+(d.running?\"animation:pulse 2s infinite;\": \"\")+'\"></span> ShadowMount <b>'+d.status+'</b>';""var v=document.getElementById('sm-ver-chip');""if(v){v.style.display=(d.running&&d.version!=='nicht aktiv')?'flex':'none';""if(d.version!=='nicht aktiv')v.innerHTML='v <b>'+d.version+'</b>';}""var ver=d.version||'';""var ar=!d.running||smVer(ver,1,7,'alpha',3);""var pim=!d.running||smVer(ver,1,7,'alpha',4);""var as=document.getElementById('ar-wrap');""if(as){as.style.opacity=ar?\'1\':\'0.35\';as.style.pointerEvents=ar?\'auto\':\'none\';}""var ab=document.querySelectorAll('.ar-b');ab.forEach(function(e){e.style.display=ar?'none':'inline';});""var pb=document.getElementById('pim-badge');""if(pb)pb.style.display=pim?'none':'inline';""var pr=document.getElementById('pim-row');""if(pr)pr.style.opacity=pim?'1':'0.35';""if(pr)pr.style.pointerEvents=pim?'auto':'none';""var lb=document.getElementById('lang-badge');""if(lb)lb.style.display=pim?'none':'inline';""var lr=document.getElementById('lang-row');""if(lr)lr.style.opacity=pim?'1':'0.35';""if(lr)lr.style.pointerEvents=pim?'auto':'none';""var api=!d.running||smVer(ver,1,7,'alpha',3);""var aw=document.getElementById('api-wrap');""if(aw){aw.style.opacity=api?'1':'0.35';aw.style.pointerEvents=api?'auto':'none';}""var apib=document.getElementById('api-badge');""if(apib)apib.style.display=api?'none':'inline';""var fan=!d.running||smVer(ver,1,7,'alpha',5);""var fr=document.getElementById('fan-row');""if(fr){fr.style.opacity=fan?'1':'0.35';fr.style.pointerEvents=fan?'auto':'none';}""var fb=fr?fr.querySelector('.vbadge'):null;""if(fb)fb.style.display=fan?'none':'inline';""var cb=document.getElementById('sm-ctrl-btn');""if(cb){cb.setAttribute('data-action',d.running?'stop':'start');cb.className='sm-ctrl '+(d.running?'stop':'start');cb.textContent=d.running?'Stop':'Start';}""}).catch(()=>{});}""refreshStatus();""setInterval(refreshStatus,10000);""function smCtrl(){var btn=document.getElementById('sm-ctrl-btn');if(!btn)return;var action=btn.getAttribute('data-action');if(action==='stop'){btn.disabled=true;fetch('/api/sm/stop').then(function(){setTimeout(refreshStatus,1500);setTimeout(function(){btn.disabled=false;},2000);}).catch(function(){btn.disabled=false;});}else{btn.disabled=true;fetch('/api/sm/scan').then(function(r){return r.json();}).then(function(d){if(d.count===0){alert(_t.elf_nf);btn.disabled=false;}else if(d.count===1){launchElf(btn,d.paths[0]);}else{btn.disabled=false;showElfPicker(btn,d.paths);}}).catch(function(){btn.disabled=false;});}}""function launchElf(btn,path){if(btn)btn.disabled=true;fetch('/api/sm/start?path='+encodeURIComponent(path)).then(function(r){return r.json();}).then(function(d){"
+          "if(btn)btn.disabled=false;"
+          "if(d.ok){var nm=path.split('/').pop();var l=document.getElementById('pref-elf-lbl');var b=document.getElementById('pref-elf-clr');"
+          "if(l){l.textContent=nm;l.title=path;l.style.display='inline';}if(b)b.style.display='inline';}"
+          "setTimeout(refreshStatus,2000);})){setTimeout(refreshStatus,3000);setTimeout(function(){if(btn)btn.disabled=false;},3000);}).catch(function(){if(btn)btn.disabled=false;});}""function showElfPicker(btn,paths){var old=document.getElementById('sm-elf-picker');if(old)old.remove();var picker=document.createElement('div');picker.id='sm-elf-picker';picker.style.cssText='position:fixed;top:0;left:0;width:100%%;height:100%%;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:9999;';var box=document.createElement('div');box.style.cssText='background:#0d111a;border:1px solid #1e2a42;border-radius:14px;padding:36px;min-width:500px;max-width:800px;';var title=document.createElement('p');title.style.cssText='margin:0 0 20px;font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:#64748b;font-family:monospace;';title.textContent=_t.sel_sm;box.appendChild(title);paths.forEach(function(p){var b=document.createElement('button');b.style.cssText='display:block;width:100%%;margin-bottom:10px;padding:16px 18px;border-radius:8px;border:1px solid #1e2a42;background:#131927;color:#e2e8f0;cursor:pointer;text-align:left;font-family:monospace;font-size:.75rem;word-break:break-all;';b.textContent=p;b.onclick=function(){picker.remove();launchElf(btn,p);};box.appendChild(b);});var cancel=document.createElement('button');cancel.style.cssText='display:block;width:100%%;padding:14px;border-radius:8px;border:1px solid #1e2a42;background:transparent;color:#64748b;cursor:pointer;font-family:monospace;font-size:.75rem;margin-top:6px;';cancel.textContent=_t.cancel;cancel.onclick=function(){picker.remove();};box.appendChild(cancel);picker.appendChild(box);document.body.appendChild(picker);}""document.querySelector('form').addEventListener('keydown',function(e){""if(e.key==='Enter'&&e.target.tagName!=='BUTTON')e.preventDefault();""});"
 "function addPath(){"
           "var c=document.getElementById('paths-list');"
           "var d=document.createElement('div');d.className='path-row';"
@@ -1961,58 +2027,18 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
     }
     else if(mg_match(hm->uri,mg_str("/api/sm/start"),NULL)){
         char lang[8]; read_lang(lang,sizeof(lang)); int en=(strcmp(lang,"en")==0||strcmp(lang,"fr")==0||strcmp(lang,"es")==0);
-        /* Launch SM via elfldr - path from query param or auto-scanned */
         char elf_path[SM_EPATH]={0};
         mg_http_get_var(&hm->query,"path",elf_path,sizeof(elf_path));
         if(!elf_path[0]){
             char elfs[SM_MAX_ELFS][SM_EPATH];
             if(sm_find_elfs(elfs)>0) strncpy(elf_path,elfs[0],SM_EPATH-1);
         }
-        FILE *elf=elf_path[0]?fopen(elf_path,"rb"):NULL;
-        if(!elf){
-            notify(en ? "SM ELF not found" : "SM ELF nicht gefunden");
-            mg_http_reply(c,200,"Content-Type: application/json\r\nCache-Control: no-cache\r\n",
-                "{\"ok\":false,\"err\":\"elf_not_found\"}");
-            return;
-        }
-        /* Try elfldr on port 9021 then 9020 */
-        int ports[]={9021,9020,0};
-        int sock=-1;
-        for(int pi=0;ports[pi];pi++){
-            int s=socket(AF_INET,SOCK_STREAM,0);
-            if(s<0) continue;
-            struct timeval tv={5,0};
-            setsockopt(s,SOL_SOCKET,SO_SNDTIMEO,&tv,sizeof(tv));
-            setsockopt(s,SOL_SOCKET,SO_RCVTIMEO,&tv,sizeof(tv));
-            struct sockaddr_in sa;
-            memset(&sa,0,sizeof(sa));
-            sa.sin_family=AF_INET;
-            sa.sin_port=htons((uint16_t)ports[pi]);
-            sa.sin_addr.s_addr=inet_addr("127.0.0.1");
-            if(connect(s,(struct sockaddr*)&sa,sizeof(sa))==0){sock=s;break;}
-            close(s);
-        }
-        if(sock<0){
-            fclose(elf);
-            notify(en ? "elfldr not reachable (Port 9021/9020)" : "elfldr nicht erreichbar (Port 9021/9020)");
-            mg_http_reply(c,200,"Content-Type: application/json\r\nCache-Control: no-cache\r\n",
-                "{\"ok\":false,\"err\":\"elfldr_not_reachable\"}");
-            return;
-        }
-        char buf[8192]; int err=0; size_t n;
-        while((n=fread(buf,1,sizeof(buf),elf))>0){
-            size_t off=0;
-            while(off<n){
-                ssize_t s=send(sock,buf+off,n-off,0);
-                if(s<=0){err=1;break;}
-                off+=(size_t)s;
-            }
-            if(err) break;
-        }
-        close(sock);
-        fclose(elf);
-        mg_http_reply(c,200,"Content-Type: application/json\r\nCache-Control: no-cache\r\n",
-            "{\"ok\":%s}",err?"false":"true");
+        int r = send_elf_to_elfldr(elf_path);
+        if(r==-1){ notify(en?"SM ELF not found":"SM ELF nicht gefunden"); mg_http_reply(c,200,"Content-Type: application/json\r\nCache-Control: no-cache\r\n","{\"ok\":false,\"err\":\"elf_not_found\"}"); return; }
+        if(r==-2){ notify(en?"elfldr not reachable (Port 9021/9020)":"elfldr nicht erreichbar (Port 9021/9020)"); mg_http_reply(c,200,"Content-Type: application/json\r\nCache-Control: no-cache\r\n","{\"ok\":false,\"err\":\"elfldr_not_reachable\"}"); return; }
+        /* save as preferred ELF */
+        if(elf_path[0]){ SMPrefs p; read_prefs(&p); strncpy(p.preferred_elf,elf_path,511); write_prefs(&p); }
+        mg_http_reply(c,200,"Content-Type: application/json\r\nCache-Control: no-cache\r\n","{\"ok\":%s}",r==0?"true":"false");
     }
     else if(mg_match(hm->uri,mg_str("/api/config/backup"),NULL)){
         const char *bdir=BAK_DIR;
@@ -2471,6 +2497,22 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         mg_http_reply(c,200,"Content-Type: text/plain; charset=utf-8\r\nCache-Control: no-cache\r\n","%s",lb);
         free(lb);
     }
+    else if(mg_match(hm->uri,mg_str("/api/prefs/get"),NULL)){
+        SMPrefs p; read_prefs(&p);
+        mg_http_reply(c,200,"Content-Type: application/json\r\n",
+            "{\"auto_start\":%d,\"preferred_elf\":\"%s\"}",p.auto_start,p.preferred_elf);
+    }
+    else if(mg_match(hm->uri,mg_str("/api/prefs/save"),NULL)){
+        char v[8]={0},ef[512]={0};
+        mg_http_get_var(&hm->body,"auto_start",v,sizeof(v));
+        mg_http_get_var(&hm->body,"preferred_elf",ef,sizeof(ef));
+        SMPrefs p; read_prefs(&p);
+        if(v[0]) p.auto_start=atoi(v);
+        if(ef[0]||mg_http_get_var(&hm->body,"preferred_elf",ef,1)>=0)
+            strncpy(p.preferred_elf,ef,511);
+        write_prefs(&p);
+        mg_http_reply(c,200,"Content-Type: application/json\r\n","{\"ok\":true}");
+    }
     else mg_http_reply(c,404,"","404");
 }
 
@@ -2486,8 +2528,24 @@ int payload_main(void) {
     struct mg_mgr mgr;
     mg_mgr_init(&mgr);
     mg_http_listen(&mgr,"http://0.0.0.0:" HTTP_PORT,fn,NULL);
-    int polls=0;
-    while(1){ mg_mgr_poll(&mgr,1000); usleep(100000); if(++polls==3) smplus_install_if_needed(); }
+    int polls=0, as_done=0;
+    while(1){
+        mg_mgr_poll(&mgr,1000); usleep(100000);
+        if(++polls==3) smplus_install_if_needed();
+        if(polls==6 && !as_done){ /* ~6s after start */
+            as_done=1;
+            SMPrefs prefs; read_prefs(&prefs);
+            if(prefs.auto_start){
+                char sv[64]; get_sm_version(sv,sizeof(sv));
+                if(strcmp(sv,"nicht aktiv")==0){
+                    char elf[SM_EPATH]={0};
+                    if(prefs.preferred_elf[0]) strncpy(elf,prefs.preferred_elf,SM_EPATH-1);
+                    else{ char elfs[SM_MAX_ELFS][SM_EPATH]; if(sm_find_elfs(elfs)>0) strncpy(elf,elfs[0],SM_EPATH-1); }
+                    if(elf[0]) send_elf_to_elfldr(elf);
+                }
+            }
+        }
+    }
     mg_mgr_free(&mgr); return 0;
 }
 

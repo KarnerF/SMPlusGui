@@ -2656,7 +2656,7 @@ int payload_main(void) {
     while(1){
         mg_mgr_poll(&mgr,1000); usleep(100000);
         if(++polls==3) smplus_install_if_needed();
-        if(polls==2 && !as_done){ /* ~2s after start */
+        if(polls==6 && !as_done){ /* ~6s after start — give elfldr time to initialize */
             as_done=1;
             SMPrefs prefs; read_prefs(&prefs);
             if(prefs.auto_start){

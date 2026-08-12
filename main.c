@@ -1080,8 +1080,8 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           H("<div id='panel-auto' class='panel'><div class='section'>");
           H("<div class='sublist-title'>Autostart</div>");
           H("<div class='row'><label>%s</label>"
-            "<input type='checkbox' id='as-chk' style='display:none;'%s>"
-            "<label class='switch' for='as-chk' onclick='onAS()'></label></div>",
+            "<input type='checkbox' id='as-chk' style='display:none;'%s onchange='onAS(this.checked)'>"
+            "<label class='switch' for='as-chk'></label></div>",
             L(LS_AUTOSTART), prefs.auto_start?" checked":"");
           H("<div class='numfield' style='margin-top:12px;'><label>%s</label>"
             "<button type='button' id='as-elf-btn' onclick='pickASElf()' "
@@ -1598,10 +1598,10 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "var body='';"
           "rows.forEach(function(r){if(r.value.trim())body+='extra_scan[]='+encodeURIComponent(r.value.trim())+'&';});"
           "fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body||'extra_scan_clear=1'});}"
-          "function onAS(){var cb=document.getElementById('as-chk');"
-          "var willOn=!cb.checked;" /* onclick fires before checked toggles */
+          "function onAS(willOn){"
+          "var eb=document.getElementById('as-elf-btn');"
           "if(willOn&&(!eb||eb.style.display==='none')){"
-          "cb.checked=false;" /* prevent toggle until ELF picked */
+          "document.getElementById('as-chk').checked=false;"
           "pickASElf(true);return;}"
           "fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},"
           "body:'auto_start='+(willOn?1:0)});}"

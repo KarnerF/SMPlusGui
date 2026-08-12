@@ -792,6 +792,7 @@ static void *sm_memmem(const void *haystack, size_t hlen, const void *needle, si
 }
 
 static struct mg_mgr *smg_mgr = NULL; /* for send_elf_to_elfldr chunked send */
+static char smg_pending_elf[SM_EPATH] = {0}; /* async ELF send */
 static int send_elf_to_elfldr(const char *path) {
     FILE *elf = fopen(path,"rb"); if(!elf) return -1;
     int ports[]={9021,9020,0}; int sock=-1;
@@ -2131,10 +2132,10 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
             if(sm_find_elfs(elfs)>0) strncpy(elf_path,elfs[0],SM_EPATH-1);
         }
         if(!elf_path[0]){ notify(en?"SM ELF not found":"SM ELF nicht gefunden"); mg_http_reply(c,200,"Content-Type: application/json\r\nCache-Control: no-cache\r\n","{\"ok\":false,\"err\":\"elf_not_found\"}"); return; }
-        int r=send_elf_to_elfldr(elf_path);
-        if(r==-2){ notify(en?"elfldr not reachable (Port 9021/9020)":"elfldr nicht erreichbar (Port 9021/9020)"); mg_http_reply(c,200,"Content-Type: application/json\r\nCache-Control: no-cache\r\n","{\"ok\":false,\"err\":\"elfldr_not_reachable\"}"); return; }
+        /* respond immediately, send ELF on next poll to avoid browser timeout */
+        strncpy(smg_pending_elf, elf_path, SM_EPATH-1);
         /* do NOT save preferred ELF here — managed by auto-start panel only */
-        mg_http_reply(c,200,"Content-Type: application/json\r\nCache-Control: no-cache\r\n","{\"ok\":%s}",r==0?"true":"false");
+        mg_http_reply(c,200,"Content-Type: application/json\r\nCache-Control: no-cache\r\n","{\"ok\":true}");
     }
     else if(mg_match(hm->uri,mg_str("/api/config/backup"),NULL)){
         const char *bdir=BAK_DIR;
@@ -2659,6 +2660,8 @@ int payload_main(void) {
     while(1){
         mg_mgr_poll(&mgr,1000); usleep(100000);
         if(++polls==3) smplus_install_if_needed();
+        /* send pending ELF after browser got its {ok:true} response */
+        if(smg_pending_elf[0]){ send_elf_to_elfldr(smg_pending_elf); smg_pending_elf[0]=0; }
         if(polls==6 && !as_done){ /* ~6s after start — give elfldr time to initialize */
             as_done=1;
             SMPrefs prefs; read_prefs(&prefs);

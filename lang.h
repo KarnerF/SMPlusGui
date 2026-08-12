@@ -124,7 +124,8 @@ typedef enum {
     LS_COMPAT = 112,
     LS_EXTRA_SCAN = 113,
     LS_SCAN_DEF_HINT = 114,
-    LS_COUNT = 115
+    LS_SELECT_ELF = 115,
+    LS_COUNT = 116
 } LangStrId;
 
 static int ui_lang = LANG_EN;
@@ -246,6 +247,7 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "Kompatibilit\u00e4t",
         "Zus\u00e4tzliche Scan-Verzeichnisse",
         "Standard: /data/pldmgr/payloads/*/, /data/shadowmount/, /mnt/usb0-7/ \u2014 sucht shadowmount*.elf / shadowmountplus*.elf",
+        "ELF ausw\u00e4hlen",
     },
     /* EN */ {
         "running",
@@ -362,6 +364,7 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "Compatibility",
         "Additional scan directories",
         "Default: /data/pldmgr/payloads/*/, /data/shadowmount/, /mnt/usb0-7/ \u2014 searches shadowmount*.elf / shadowmountplus*.elf",
+        "Select ELF",
     },
     /* FR */ {
         "actif",
@@ -479,6 +482,7 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "Compatibilit\u00e9",
         "R\u00e9pertoires d'analyse suppl\u00e9mentaires",
         "D\u00e9faut : /data/pldmgr/payloads/*/, /data/shadowmount/, /mnt/usb0-7/ \u2014 cherche shadowmount*.elf / shadowmountplus*.elf",
+        "S\u00e9lectionner ELF",
     },
     /* ES */ {
         "activo",
@@ -596,6 +600,7 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "Compatibilidad",
         "Directorios de an\u00e1lisis adicionales",
         "Predeterminado: /data/pldmgr/payloads/*/, /data/shadowmount/, /mnt/usb0-7/ \u2014 busca shadowmount*.elf / shadowmountplus*.elf",
+        "Seleccionar ELF",
     }
 };
 

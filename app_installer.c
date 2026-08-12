@@ -52,10 +52,11 @@ static int write_file(const char *p, const uint8_t *d, size_t s) {
 }
 
 void smplus_install_if_needed(void) {
-    if (sceAppInstUtilInitialize() != 0) return;
+    /* Only install once — skip if marker exists so icon stays at user's position */
+    FILE *m = fopen(MARKER, "r");
+    if (m) { fclose(m); return; }
 
-    /* Always uninstall + reinstall: PS5 treats it as new install and pushes to front */
-    sceAppInstUtilAppUnInstall(TITLE_ID);
+    if (sceAppInstUtilInitialize() != 0) return;
 
     char adir[256], sdir[256], par[256], ico[256];
     snprintf(adir, sizeof(adir), APP_ROOT "/%s",                    TITLE_ID);
@@ -63,6 +64,7 @@ void smplus_install_if_needed(void) {
     snprintf(par,  sizeof(par),  APP_ROOT "/%s/sce_sys/param.json", TITLE_ID);
     snprintf(ico,  sizeof(ico),  APP_ROOT "/%s/sce_sys/icon0.png",  TITLE_ID);
 
+    sceAppInstUtilAppUnInstall(TITLE_ID);
     mkdir(adir, 0755);
     mkdir(sdir, 0755);
 
@@ -71,9 +73,8 @@ void smplus_install_if_needed(void) {
 
     if (install_title_dir(TITLE_ID, APP_ROOT "/") != 0) goto done;
 
-    mkdir("/data/shadowmount", 0755);
+    mkdir("/data/SMPlusGui", 0755);
     write_file(MARKER, (const uint8_t *)"ok\n", 3);
-
 
 done:
     sceAppInstUtilTerminate();

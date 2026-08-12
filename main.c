@@ -791,7 +791,7 @@ static void *sm_memmem(const void *haystack, size_t hlen, const void *needle, si
     return NULL;
 }
 
-/* pending ELF — set by /api/sm/start, sent on next poll to avoid blocking browser */
+static struct mg_mgr *g_mgr = NULL; /* global for send_elf_to_elfldr chunked send */
 static int send_elf_to_elfldr(const char *path) {
     FILE *elf = fopen(path,"rb"); if(!elf) return -1;
     int ports[]={9021,9020,0}; int sock=-1;
@@ -807,11 +807,13 @@ static int send_elf_to_elfldr(const char *path) {
         close(s);
     }
     if(sock<0){fclose(elf);return -2;}
-    char buf[8192]; int err=0; size_t n;
+    char buf[4096]; int err=0; size_t n; int chunks=0;
     while((n=fread(buf,1,sizeof(buf),elf))>0){
         size_t off=0;
         while(off<n){ssize_t s=send(sock,buf+off,n-off,0);if(s<=0){err=1;break;}off+=(size_t)s;}
         if(err) break;
+        /* let Mongoose handle pending requests every 8 chunks (~32KB) */
+        if(g_mgr&&(++chunks%8)==0) mg_mgr_poll(g_mgr,0);
     }
     close(sock); fclose(elf);
     return err ? -3 : 0;
@@ -2650,6 +2652,7 @@ int payload_main(void) {
     else        snprintf(_url, sizeof(_url), "Port " HTTP_PORT);
     _notify_send("SMPlusGui v" SMPLUS_VERSION, _url);
     struct mg_mgr mgr;
+    g_mgr = &mgr;
     mg_mgr_init(&mgr);
     mg_http_listen(&mgr,"http://0.0.0.0:" HTTP_PORT,fn,NULL);
     int polls=0, as_done=0;

@@ -73,6 +73,7 @@ static void notify(const char *msg) { _notify_send(msg, NULL); }
 #define PREFS_MAX_EXTRA 8
 typedef struct {
     int auto_start;
+    int icon_always_front; /* 1=reinstall each launch (default), 0=once only */
     char preferred_elf[512];
     char extra_scan[PREFS_MAX_EXTRA][256];
     int extra_scan_count;
@@ -85,6 +86,7 @@ static void read_prefs(SMPrefs *p) {
     while(fgets(line, sizeof(line), f)) {
         line[strcspn(line,"\r\n")]=0;
         if(strncmp(line,"auto_start=",11)==0) p->auto_start=atoi(line+11);
+        else if(strncmp(line,"icon_always_front=",18)==0) p->icon_always_front=atoi(line+18);
         else if(strncmp(line,"preferred_elf=",14)==0) strncpy(p->preferred_elf,line+14,511);
         else if(strncmp(line,"extra_scan=",11)==0&&p->extra_scan_count<PREFS_MAX_EXTRA)
             strncpy(p->extra_scan[p->extra_scan_count++],line+11,255);
@@ -95,6 +97,7 @@ static void write_prefs(const SMPrefs *p) {
     mkdir("/data/SMPlusGui",0755);
     FILE *f = fopen(PREFS_PATH,"w"); if(!f) return;
     fprintf(f,"auto_start=%d\n",p->auto_start);
+    fprintf(f,"icon_always_front=%d\n",p->icon_always_front);
     fprintf(f,"preferred_elf=%s\n",p->preferred_elf);
     for(int i=0;i<p->extra_scan_count;i++) fprintf(f,"extra_scan=%s\n",p->extra_scan[i]);
     fclose(f);
@@ -1098,6 +1101,12 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
               H("<div class='path-row'><input type='text' value='%s' placeholder='/mnt/usb0' onchange='saveExtraScan()'>"
                 "<button type='button' class='rm' onclick='rmExtraScan(this)'>&times;</button></div>",prefs.extra_scan[i]);
           H("</div><button type='button' class='addbtn' onclick='addExtraScan()'>+ %s</button>",L(LS_ADD_PATH));
+          /* icon option */
+          H("<div class='sublist-title' style='margin-top:16px;'>%s</div>",L(LS_ICON_FRONT));
+          H("<div class='row'><label>%s</label>"
+            "<input type='checkbox' id='icon-front-chk' style='display:none;'%s onchange='saveIconFront(this.checked)'>"
+            "<label class='switch' for='icon-front-chk'></label></div>",
+            L(LS_ICON_FRONT_LABEL), prefs.icon_always_front?" checked":"");
           H("</div></div>"); } /* close autostart section + panel-auto */
 
         /* Panel: Auto-Remove */
@@ -1601,6 +1610,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "var body='';"
           "rows.forEach(function(r){if(r.value.trim())body+='extra_scan[]='+encodeURIComponent(r.value.trim())+'&';});"
           "fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body||'extra_scan_clear=1'});}"
+          "function saveIconFront(v){fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'icon_always_front='+(v?1:0)});}"
           "function onAS(willOn){"
           "var eb=document.getElementById('as-elf-btn');"
           "if(willOn&&(!eb||eb.style.display==='none')){"
@@ -2598,11 +2608,13 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
             "{\"auto_start\":%d,\"preferred_elf\":\"%s\"}",p.auto_start,p.preferred_elf);
     }
     else if(mg_match(hm->uri,mg_str("/api/prefs/save"),NULL)){
-        char v[8]={0},ef[512]={0};
+        char v[8]={0},ef[512]={0},vif[8]={0};
         mg_http_get_var(&hm->body,"auto_start",v,sizeof(v));
         mg_http_get_var(&hm->body,"preferred_elf",ef,sizeof(ef));
+        mg_http_get_var(&hm->body,"icon_always_front",vif,sizeof(vif));
         SMPrefs p; read_prefs(&p);
         if(v[0]) p.auto_start=atoi(v);
+        if(vif[0]) p.icon_always_front=atoi(vif);
         if(ef[0]||mg_http_get_var(&hm->body,"preferred_elf",ef,1)>=0)
             strncpy(p.preferred_elf,ef,511);
         /* update extra_scan if present */
@@ -2654,10 +2666,12 @@ int payload_main(void) {
     smg_mgr = &mgr;
     mg_mgr_init(&mgr);
     mg_http_listen(&mgr,"http://0.0.0.0:" HTTP_PORT,fn,NULL);
-    int polls=0, as_done=0;
+    int polls=0, as_done=0, net_timer=0;
+    char cur_ip[48]; strncpy(cur_ip,_ip,47);
+    { SMPrefs _p; read_prefs(&_p); /* read icon pref once at start */
     while(1){
         mg_mgr_poll(&mgr,1000); usleep(100000);
-        if(++polls==3) smplus_install_if_needed();
+        if(++polls==3) smplus_install_if_needed(_p.icon_always_front);
         /* send pending ELF after browser got its {ok:true} response */
         if(smg_pending_elf[0]){ send_elf_to_elfldr(smg_pending_elf); smg_pending_elf[0]=0; }
         if(polls==6 && !as_done){ /* ~6s after start — give elfldr time to initialize */
@@ -2670,7 +2684,20 @@ int payload_main(void) {
                 if(elf[0]) send_elf_to_elfldr(elf);
             }
         }
-    }
+        /* Network watchdog — restart Mongoose if IP changed after standby */
+        if(++net_timer>=10){
+            net_timer=0;
+            char new_ip[48]={0}; get_local_ip(new_ip,sizeof(new_ip));
+            if(new_ip[0]&&strcmp(new_ip,cur_ip)!=0){
+                strncpy(cur_ip,new_ip,47);
+                mg_mgr_free(&mgr); mg_mgr_init(&mgr);
+                mg_http_listen(&mgr,"http://0.0.0.0:" HTTP_PORT,fn,NULL);
+                smg_mgr=&mgr;
+                char url[64]; snprintf(url,sizeof(url),"http://%s:" HTTP_PORT,cur_ip);
+                _notify_send("SMPlusGui v" SMPLUS_VERSION, url);
+            }
+        }
+    } }
     mg_mgr_free(&mgr); return 0;
 }
 

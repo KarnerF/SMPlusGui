@@ -125,7 +125,9 @@ typedef enum {
     LS_EXTRA_SCAN = 113,
     LS_SCAN_DEF_HINT = 114,
     LS_SELECT_ELF = 115,
-    LS_COUNT = 116
+    LS_ICON_FRONT = 116,
+    LS_ICON_FRONT_LABEL = 117,
+    LS_COUNT = 118
 } LangStrId;
 
 static int ui_lang = LANG_EN;
@@ -248,6 +250,8 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "Zus\u00e4tzliche Scan-Verzeichnisse",
         "Standard: /data/pldmgr/payloads/*/, /data/shadowmount/, /mnt/usb0-7/ \u2014 sucht shadowmount*.elf / shadowmountplus*.elf",
         "ELF ausw\u00e4hlen",
+        "Icon-Position",
+        "Icon immer nach vorne schieben",
     },
     /* EN */ {
         "running",
@@ -365,6 +369,8 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "Additional scan directories",
         "Default: /data/pldmgr/payloads/*/, /data/shadowmount/, /mnt/usb0-7/ \u2014 searches shadowmount*.elf / shadowmountplus*.elf",
         "Select ELF",
+        "Icon Position",
+        "Always move icon to front",
     },
     /* FR */ {
         "actif",
@@ -483,6 +489,8 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "R\u00e9pertoires d'analyse suppl\u00e9mentaires",
         "D\u00e9faut : /data/pldmgr/payloads/*/, /data/shadowmount/, /mnt/usb0-7/ \u2014 cherche shadowmount*.elf / shadowmountplus*.elf",
         "S\u00e9lectionner ELF",
+        "Position de l'ic\u00f4ne",
+        "Toujours mettre l'ic\u00f4ne au premier plan",
     },
     /* ES */ {
         "activo",
@@ -601,6 +609,8 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "Directorios de an\u00e1lisis adicionales",
         "Predeterminado: /data/pldmgr/payloads/*/, /data/shadowmount/, /mnt/usb0-7/ \u2014 busca shadowmount*.elf / shadowmountplus*.elf",
         "Seleccionar ELF",
+        "Posici\u00f3n del icono",
+        "Siempre mover el icono al frente",
     }
 };
 

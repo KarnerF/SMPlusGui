@@ -51,10 +51,14 @@ static int write_file(const char *p, const uint8_t *d, size_t s) {
     return w == s ? 0 : -1;
 }
 
-void smplus_install_if_needed(void) {
-    if (sceAppInstUtilInitialize() != 0) return;
+void smplus_install_if_needed(int icon_always_front) {
+    /* In once-only mode, skip if marker exists */
+    if(!icon_always_front) {
+        FILE *m = fopen(MARKER, "r");
+        if (m) { fclose(m); return; }
+    }
 
-    /* Always reinstall: pushes icon to front of PS5 home screen */
+    if (sceAppInstUtilInitialize() != 0) return;
     char adir[256], sdir[256], par[256], ico[256];
     snprintf(adir, sizeof(adir), APP_ROOT "/%s",                    TITLE_ID);
     snprintf(sdir, sizeof(sdir), APP_ROOT "/%s/sce_sys",            TITLE_ID);
@@ -69,6 +73,9 @@ void smplus_install_if_needed(void) {
     if (write_file(ico, sm_icon0_png,  sm_icon0_png_size)  != 0) goto done;
 
     install_title_dir(TITLE_ID, APP_ROOT "/");
+    /* write marker so once-only mode knows it was installed */
+    mkdir("/data/SMPlusGui", 0755);
+    write_file(MARKER, (const uint8_t *)"ok\n", 3);
 
 done:
     sceAppInstUtilTerminate();

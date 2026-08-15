@@ -82,7 +82,8 @@ static void notify(const char *msg) { _notify_send(msg, NULL); }
 #define PREFS_MAX_EXTRA 8
 typedef struct {
     int auto_start;
-    int icon_always_front; /* 1=reinstall each launch (default), 0=once only */
+    int icon_always_front;
+    int always_restart_sm; /* 0=only start if not running (default), 1=always restart */
     char preferred_elf[512];
     char extra_scan[PREFS_MAX_EXTRA][256];
     int extra_scan_count;
@@ -96,6 +97,7 @@ static void read_prefs(SMPrefs *p) {
         line[strcspn(line,"\r\n")]=0;
         if(strncmp(line,"auto_start=",11)==0) p->auto_start=atoi(line+11);
         else if(strncmp(line,"icon_always_front=",18)==0) p->icon_always_front=atoi(line+18);
+        else if(strncmp(line,"always_restart_sm=",18)==0) p->always_restart_sm=atoi(line+18);
         else if(strncmp(line,"preferred_elf=",14)==0) strncpy(p->preferred_elf,line+14,511);
         else if(strncmp(line,"extra_scan=",11)==0&&p->extra_scan_count<PREFS_MAX_EXTRA)
             strncpy(p->extra_scan[p->extra_scan_count++],line+11,255);
@@ -107,6 +109,7 @@ static void write_prefs(const SMPrefs *p) {
     FILE *f = fopen(PREFS_PATH,"w"); if(!f) return;
     fprintf(f,"auto_start=%d\n",p->auto_start);
     fprintf(f,"icon_always_front=%d\n",p->icon_always_front);
+    fprintf(f,"always_restart_sm=%d\n",p->always_restart_sm);
     fprintf(f,"preferred_elf=%s\n",p->preferred_elf);
     for(int i=0;i<p->extra_scan_count;i++) fprintf(f,"extra_scan=%s\n",p->extra_scan[i]);
     fclose(f);
@@ -1116,6 +1119,11 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
             "<input type='checkbox' id='icon-front-chk' style='display:none;'%s onchange='saveIconFront(this.checked)'>"
             "<label class='switch' for='icon-front-chk'></label></div>",
             L(LS_ICON_FRONT_LABEL), prefs.icon_always_front?" checked":"");
+          /* always-restart option */
+          H("<div class='row'><label>%s</label>"
+            "<input type='checkbox' id='ars-chk' style='display:none;'%s onchange='saveAlwaysRestart(this.checked)'>"
+            "<label class='switch' for='ars-chk'></label></div>",
+            L(LS_ALWAYS_RESTART_SM), prefs.always_restart_sm?" checked":"");
           H("</div></div>"); } /* close autostart section + panel-auto */
 
         /* Panel: Auto-Remove */
@@ -1619,6 +1627,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "var body='';"
           "rows.forEach(function(r){if(r.value.trim())body+='extra_scan[]='+encodeURIComponent(r.value.trim())+'&';});"
           "fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body||'extra_scan_clear=1'});}"
+          "function saveAlwaysRestart(v){fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'always_restart_sm='+(v?1:0)});}"
           "function saveIconFront(v){fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'icon_always_front='+(v?1:0)});}"
           "function onAS(willOn){"
           "var eb=document.getElementById('as-elf-btn');"
@@ -2617,13 +2626,15 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
             "{\"auto_start\":%d,\"preferred_elf\":\"%s\"}",p.auto_start,p.preferred_elf);
     }
     else if(mg_match(hm->uri,mg_str("/api/prefs/save"),NULL)){
-        char v[8]={0},ef[512]={0},vif[8]={0};
+        char v[8]={0},ef[512]={0},vif[8]={0},vars[8]={0};
         mg_http_get_var(&hm->body,"auto_start",v,sizeof(v));
         mg_http_get_var(&hm->body,"preferred_elf",ef,sizeof(ef));
         mg_http_get_var(&hm->body,"icon_always_front",vif,sizeof(vif));
+        mg_http_get_var(&hm->body,"always_restart_sm",vars,sizeof(vars));
         SMPrefs p; read_prefs(&p);
         if(v[0]) p.auto_start=atoi(v);
         if(vif[0]) p.icon_always_front=atoi(vif);
+        if(vars[0]) p.always_restart_sm=atoi(vars);
         if(ef[0]||mg_http_get_var(&hm->body,"preferred_elf",ef,1)>=0)
             strncpy(p.preferred_elf,ef,511);
         /* update extra_scan if present */
@@ -2694,10 +2705,27 @@ int payload_main(void) {
             as_done=1;
             SMPrefs prefs; read_prefs(&prefs);
             if(prefs.auto_start){
-                char elf[SM_EPATH]={0};
-                if(prefs.preferred_elf[0]) strncpy(elf,prefs.preferred_elf,SM_EPATH-1);
-                else{ char elfs[SM_MAX_ELFS][SM_EPATH]; if(sm_find_elfs(elfs)>0) strncpy(elf,elfs[0],SM_EPATH-1); }
-                if(elf[0]) send_elf_to_elfldr(elf);
+                /* check if SM already running unless always_restart_sm is set */
+                int sm_up=0;
+                if(!prefs.always_restart_sm){
+                    int ts=socket(AF_INET,SOCK_STREAM,0);
+                    if(ts>=0){
+                        struct timeval tv={1,0};
+                        setsockopt(ts,SOL_SOCKET,SO_RCVTIMEO,&tv,sizeof(tv));
+                        setsockopt(ts,SOL_SOCKET,SO_SNDTIMEO,&tv,sizeof(tv));
+                        struct sockaddr_in ta; memset(&ta,0,sizeof(ta));
+                        ta.sin_family=AF_INET; ta.sin_port=htons(10101);
+                        ta.sin_addr.s_addr=inet_addr("127.0.0.1");
+                        if(connect(ts,(struct sockaddr*)&ta,sizeof(ta))==0) sm_up=1;
+                        close(ts);
+                    }
+                }
+                if(!sm_up){
+                    char elf[SM_EPATH]={0};
+                    if(prefs.preferred_elf[0]) strncpy(elf,prefs.preferred_elf,SM_EPATH-1);
+                    else{ char elfs[SM_MAX_ELFS][SM_EPATH]; if(sm_find_elfs(elfs)>0) strncpy(elf,elfs[0],SM_EPATH-1); }
+                    if(elf[0]) send_elf_to_elfldr(elf);
+                }
             }
         }
         /* Network watchdog — restart Mongoose after standby/resume */

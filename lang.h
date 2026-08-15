@@ -127,7 +127,8 @@ typedef enum {
     LS_SELECT_ELF = 115,
     LS_ICON_FRONT = 116,
     LS_ICON_FRONT_LABEL = 117,
-    LS_COUNT = 118
+    LS_ALWAYS_RESTART_SM = 118,
+    LS_COUNT = 119
 } LangStrId;
 
 static int ui_lang = LANG_EN;
@@ -252,6 +253,7 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "ELF ausw\u00e4hlen",
         "Icon-Position",
         "Icon immer nach vorne schieben",
+        "SM immer neu starten (auch wenn l\u00e4uft)",
     },
     /* EN */ {
         "running",
@@ -371,6 +373,7 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "Select ELF",
         "Icon Position",
         "Always move icon to front",
+        "Always restart SM (even if running)",
     },
     /* FR */ {
         "actif",
@@ -491,6 +494,7 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "S\u00e9lectionner ELF",
         "Position de l'ic\u00f4ne",
         "Toujours mettre l'ic\u00f4ne au premier plan",
+        "Toujours red\u00e9marrer SM (m\u00eame si actif)",
     },
     /* ES */ {
         "activo",
@@ -611,6 +615,7 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "Seleccionar ELF",
         "Posici\u00f3n del icono",
         "Siempre mover el icono al frente",
+        "Siempre reiniciar SM (incluso si est\u00e1 activo)",
     }
 };
 

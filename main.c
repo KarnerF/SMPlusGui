@@ -1063,6 +1063,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         /* Panel: General / Notifications */
         H("<div id='panel-gen' class='panel'><div class='section'>");
         H("<div class='sublist-title'>%s</div>",L(LS_NOTIFS));
+        SW("qm","quiet_mode",L(LS_QUIET_MODE),cfg.quiet_mode);
         H("<div id='lang-row' class='numfield' style='%s'>",has_lang?"":"opacity:.35;pointer-events:none;");
         H("<label>%s <span class='vbadge' id='lang-badge' style='%s'>ab 1.7alpha4</span></label>",
           L(LS_NOTIF_LANG),has_lang?"display:none;":"");

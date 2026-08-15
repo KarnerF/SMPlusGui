@@ -2676,6 +2676,8 @@ int payload_main(void) {
     if (_ip[0]) snprintf(_url, sizeof(_url), "http://%s:" HTTP_PORT, _ip);
     else        snprintf(_url, sizeof(_url), "Port " HTTP_PORT);
     _notify_send("SMPlusGui v" SMPLUS_VERSION, _url);
+    /* simple debug notification like other payloads */
+    { char dmsg[128]; snprintf(dmsg,sizeof(dmsg),"SMPlusGui v" SMPLUS_VERSION "\n%s",_url); notify_simple(dmsg); }
     struct mg_mgr mgr;
     smg_mgr = &mgr;
     mg_mgr_init(&mgr);
@@ -2711,7 +2713,7 @@ int payload_main(void) {
                 mg_http_listen(&mgr,"http://0.0.0.0:" HTTP_PORT,fn,NULL);
                 smg_mgr=&mgr;
                 /* simple debug notification on restore — no icon */
-                char rmsg[80]; snprintf(rmsg,sizeof(rmsg),"Restore SMPlusGui http://%s:" HTTP_PORT,cur_ip);
+                char rmsg[128]; snprintf(rmsg,sizeof(rmsg),"Restored Service: SMPlusGui\nhttp://%s:" HTTP_PORT,cur_ip);
                 notify_simple(rmsg);
             } else if(!new_ip[0]&&cur_ip[0]) {
                 cur_ip[0]=0; /* IP lost — next cycle with IP will trigger restore */

@@ -2653,7 +2653,12 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
     else mg_http_reply(c,404,"","404");
 }
 
+/* SIGCONT signals standby resume on PS5 */
+static volatile sig_atomic_t smg_resume = 0;
+static void on_resume(int s){(void)s;smg_resume=1;}
+
 int payload_main(void) {
+    signal(SIGCONT, on_resume);
     (void)syscall(SYS_thr_set_name,-1,PAYLOAD_NAME);
     terminate_existing_instances(PAYLOAD_NAME);
     char _ip[48] = {0};
@@ -2684,13 +2689,19 @@ int payload_main(void) {
                 if(elf[0]) send_elf_to_elfldr(elf);
             }
         }
-        /* Network watchdog — restart Mongoose if IP changed after standby */
+        /* Network watchdog — restart Mongoose after standby/resume */
         if(++net_timer>=10){
             net_timer=0;
             char new_ip[48]={0}; get_local_ip(new_ip,sizeof(new_ip));
-            if(new_ip[0]&&strcmp(new_ip,cur_ip)!=0){
-                strncpy(cur_ip,new_ip,47);
-                mg_mgr_free(&mgr); mg_mgr_init(&mgr);
+            /* trigger restart if: IP changed, IP returned after being empty, or SIGCONT received */
+            int ip_changed = (new_ip[0] && strcmp(new_ip,cur_ip)!=0);
+            int ip_restored = (!cur_ip[0] && new_ip[0]); /* was lost, now back */
+            if(ip_changed||ip_restored||smg_resume){
+                smg_resume=0;
+                strncpy(cur_ip,new_ip[0]?new_ip:cur_ip,47);
+            } else if(!new_ip[0]&&cur_ip[0]) {
+                cur_ip[0]=0; /* mark IP as lost so restore is detected */
+                mg_mgr_free(&mgr); usleep(500000); mg_mgr_init(&mgr);
                 mg_http_listen(&mgr,"http://0.0.0.0:" HTTP_PORT,fn,NULL);
                 smg_mgr=&mgr;
                 char url[64]; snprintf(url,sizeof(url),"http://%s:" HTTP_PORT,cur_ip);

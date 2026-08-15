@@ -7,6 +7,8 @@
 
 #include "app_installer.h"
 
+extern int sceNotificationSend(int uid, int logged, const char *payload);
+
 /* Assets einbetten - exakt wie Payload Manager und Game Compressor */
 #define INCASSET(name, file) \
   __asm__(".section .rodata\n" \
@@ -73,9 +75,13 @@ void smplus_install_if_needed(int icon_always_front) {
     if (write_file(ico, sm_icon0_png,  sm_icon0_png_size)  != 0) goto done;
 
     install_title_dir(TITLE_ID, APP_ROOT "/");
-    /* write marker so once-only mode knows it was installed */
     mkdir("/data/SMPlusGui", 0755);
     write_file(MARKER, (const uint8_t *)"ok\n", 3);
+    sceNotificationSend(0xFE,1,"{\"rawData\":{\"viewTemplateType\":\"InteractiveToastTemplateB\","
+        "\"channelType\":\"Downloads\",\"useCaseId\":\"IDC\",\"toastOverwriteType\":\"No\","
+        "\"isImmediate\":true,\"priority\":100,\"viewData\":{\"icon\":{\"type\":\"Predefined\","
+        "\"parameters\":{\"icon\":\"download\"}},\"message\":{\"body\":\"SMPlusGui: Icon installiert\"}},"
+        "\"createdDateTime\":\"2025-01-01T00:00:00.000Z\",\"localNotificationId\":\"ico1\"}}");
 
 done:
     sceAppInstUtilTerminate();

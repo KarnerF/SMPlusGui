@@ -2693,19 +2693,18 @@ int payload_main(void) {
         if(++net_timer>=10){
             net_timer=0;
             char new_ip[48]={0}; get_local_ip(new_ip,sizeof(new_ip));
-            /* trigger restart if: IP changed, IP returned after being empty, or SIGCONT received */
             int ip_changed = (new_ip[0] && strcmp(new_ip,cur_ip)!=0);
-            int ip_restored = (!cur_ip[0] && new_ip[0]); /* was lost, now back */
+            int ip_restored = (!cur_ip[0] && new_ip[0]);
             if(ip_changed||ip_restored||smg_resume){
                 smg_resume=0;
-                strncpy(cur_ip,new_ip[0]?new_ip:cur_ip,47);
-            } else if(!new_ip[0]&&cur_ip[0]) {
-                cur_ip[0]=0; /* mark IP as lost so restore is detected */
+                if(new_ip[0]) strncpy(cur_ip,new_ip,47);
                 mg_mgr_free(&mgr); usleep(500000); mg_mgr_init(&mgr);
                 mg_http_listen(&mgr,"http://0.0.0.0:" HTTP_PORT,fn,NULL);
                 smg_mgr=&mgr;
                 char url[64]; snprintf(url,sizeof(url),"http://%s:" HTTP_PORT,cur_ip);
                 _notify_send("SMPlusGui v" SMPLUS_VERSION, url);
+            } else if(!new_ip[0]&&cur_ip[0]) {
+                cur_ip[0]=0; /* IP lost — next cycle with IP will trigger restore */
             }
         }
     } }

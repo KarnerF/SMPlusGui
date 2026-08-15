@@ -2701,8 +2701,9 @@ int payload_main(void) {
                 mg_mgr_free(&mgr); usleep(500000); mg_mgr_init(&mgr);
                 mg_http_listen(&mgr,"http://0.0.0.0:" HTTP_PORT,fn,NULL);
                 smg_mgr=&mgr;
-                char url[64]; snprintf(url,sizeof(url),"http://%s:" HTTP_PORT,cur_ip);
-                _notify_send("SMPlusGui v" SMPLUS_VERSION, url);
+                /* simple restore notification without icon */
+                char rmsg[80]; snprintf(rmsg,sizeof(rmsg),"Restore SMPlusGui - http://%s:" HTTP_PORT,cur_ip);
+                notify(rmsg);
             } else if(!new_ip[0]&&cur_ip[0]) {
                 cur_ip[0]=0; /* IP lost — next cycle with IP will trigger restore */
             }

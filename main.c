@@ -39,6 +39,15 @@ static const char* ps5_lang_to_ui(int id) {
 #define SCE_NOTIFY_UID 0xFE
 int sceNotificationSend(int uid, int logged, const char *payload);
 
+/* simple debug notification like Payload Manager */
+typedef struct { char padding[45]; char message[3075]; } notify_request_t;
+int sceKernelSendNotificationRequest(int device, notify_request_t *req, size_t size, int unused);
+static void notify_simple(const char *msg){
+    notify_request_t req; memset(&req,0,sizeof(req));
+    strncpy(req.message,msg,sizeof(req.message)-1);
+    sceKernelSendNotificationRequest(0,&req,sizeof(req),0);
+}
+
 static void _notify_send(const char *title, const char *sub) {
     char id[24], buf[2048];
     snprintf(id, sizeof(id), "%lu", (unsigned long)time(NULL));
@@ -2701,9 +2710,9 @@ int payload_main(void) {
                 mg_mgr_free(&mgr); usleep(500000); mg_mgr_init(&mgr);
                 mg_http_listen(&mgr,"http://0.0.0.0:" HTTP_PORT,fn,NULL);
                 smg_mgr=&mgr;
-                /* simple restore notification without icon */
-                char rmsg[80]; snprintf(rmsg,sizeof(rmsg),"Restore SMPlusGui - http://%s:" HTTP_PORT,cur_ip);
-                notify(rmsg);
+                /* simple debug notification on restore — no icon */
+                char rmsg[80]; snprintf(rmsg,sizeof(rmsg),"Restore SMPlusGui http://%s:" HTTP_PORT,cur_ip);
+                notify_simple(rmsg);
             } else if(!new_ip[0]&&cur_ip[0]) {
                 cur_ip[0]=0; /* IP lost — next cycle with IP will trigger restore */
             }

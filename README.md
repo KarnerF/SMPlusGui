@@ -4,17 +4,10 @@ A fun side project — a web-based config UI for [ShadowMountPlus](https://githu
 
 Opens at **http://\<PS5-IP\>:7070** from any browser.
 
----
-
-## What it does
-
-- Configure all ShadowMountPlus settings from a browser (no FTP, no text editor)
-- Autostart SM automatically when the GUI launches
-- Manage config backups (create, restore, copy to/from USB)
-- View SM debug log live
-- Start/Stop SM via elfldr
-- Recovers automatically after PS5 rest mode
-- German, English, French, Spanish UI — auto-detected from PS5 system language (DE/FR/ES only; everything else falls back to English)
+- Configure all ShadowMountPlus settings without FTP or text editor
+- Autostart SM on launch, config backups, live debug log, Start/Stop via elfldr
+- Recovers after PS5 rest mode
+- DE/EN/FR/ES — auto-detected from PS5 system language, others fall back to English
 
 ---
 

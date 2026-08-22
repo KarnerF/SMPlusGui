@@ -1278,13 +1278,22 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
             H("<div class='path-row'><input type='text' name='global_fakelib_exclude[]' value='%s' placeholder='PPSA12345'><button type='button' class='rm' onclick='this.parentElement.remove()'>&times;</button></div>",cfg.global_fakelib_exclude[i]);
         H("</div><button type='button' class='addbtn' onclick='addRow(\"fakelib-ex-list\",\"global_fakelib_exclude[]\",\"PPSA12345\")'>+ global_fakelib_exclude</button>");
         /* Emulator settings (1.7alpha7+) */
-        H("<div style='%s'><div class='sublist-title' style='margin-top:16px;'>%s <span class='vbadge' style='%s'>ab 1.7alpha7</span></div>",
-          has_emus?"":"opacity:.35;pointer-events:none",L(LS_EMUS),
-          has_emus?"display:none;":"");
-        SW("ue","update_emulators",L(LS_UPDATE_EMUS),cfg.update_emulators);
-        TF("emulators_path",L(LS_EMUS_PATH),cfg.emulators_path,"/data/shadowmount/emus");
-        SW("aua","auto_update_ampr","auto_update_ampr",cfg.auto_update_ampr);
-        TF("ampr_update_url","ampr_update_url",cfg.ampr_update_url,"https://github.com/drakmor/ampr_emu/...");
+        H("<div style='%s'><div class='sublist-title' style='margin-top:16px;'>%s</div>",
+          has_emus?"":"opacity:.35;pointer-events:none",L(LS_EMUS));
+        H("<div class='row'><label>%s <span class='vbadge' style='%s'>ab 1.7alpha7</span></label>"
+          "<input type='checkbox' id='ue' name='update_emulators' value='1' %s>"
+          "<label class='switch' for='ue'></label></div>",
+          L(LS_UPDATE_EMUS),has_emus?"display:none;":"",cfg.update_emulators?"checked":"");
+        H("<div class='numfield'><label>%s <span class='vbadge' style='%s'>ab 1.7alpha7</span></label>"
+          "<input type='text' name='emulators_path' value='%s' placeholder='/data/shadowmount/emus'></div>",
+          L(LS_EMUS_PATH),has_emus?"display:none;":"",cfg.emulators_path);
+        H("<div class='row'><label>auto_update_ampr <span class='vbadge' style='%s'>ab 1.7alpha7</span></label>"
+          "<input type='checkbox' id='aua' name='auto_update_ampr' value='1' %s>"
+          "<label class='switch' for='aua'></label></div>",
+          has_emus?"display:none;":"",cfg.auto_update_ampr?"checked":"");
+        H("<div class='numfield'><label>ampr_update_url <span class='vbadge' style='%s'>ab 1.7alpha7</span></label>"
+          "<input type='text' name='ampr_update_url' value='%s' placeholder='https://...'></div>",
+          has_emus?"display:none;":"",cfg.ampr_update_url);
         H("</div>");
         H("</div></div>"); /* close fakelib section + panel-fkl */
 
@@ -1327,24 +1336,28 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
               H("<option value='%d'%s>%d&deg;C</option>",t,cur==t?" selected":"",t); }
         H("</select></div></div>");
         /* Legacy mount profiles (1.7alpha7+) */
-        H("<div style='%s'><div class='sublist-title' style='margin-top:16px;'>%s <span class='vbadge' style='%s'>ab 1.7alpha7</span></div>",
-          has_legacy_mp?"":"opacity:.35;pointer-events:none",L(LS_LEGACY_MOUNT),
-          has_legacy_mp?"display:none;":"");
-        H("<div class='row'><label>legacy_mount_ufs (.ffpkg)</label>"
+        H("<div style='%s'><div class='sublist-title' style='margin-top:16px;'>%s</div>",
+          has_legacy_mp?"":"opacity:.35;pointer-events:none",L(LS_LEGACY_MOUNT));
+        H("<div class='row'><label>legacy_mount_ufs (.ffpkg) <span class='vbadge' style='%s'>ab 1.7alpha7</span></label>"
           "<input type='checkbox' id='lmu' name='legacy_mount_ufs' value='1' %s>"
-          "<label class='switch' for='lmu'></label></div>",cfg.legacy_mount_ufs?"checked":"");
-        H("<div class='row'><label>legacy_mount_exfat (.exfat)</label>"
+          "<label class='switch' for='lmu'></label></div>",
+          has_legacy_mp?"display:none;":"",cfg.legacy_mount_ufs?"checked":"");
+        H("<div class='row'><label>legacy_mount_exfat (.exfat) <span class='vbadge' style='%s'>ab 1.7alpha7</span></label>"
           "<input type='checkbox' id='lme' name='legacy_mount_exfat' value='1' %s>"
-          "<label class='switch' for='lme'></label></div>",cfg.legacy_mount_exfat?"checked":"");
-        H("<div class='row'><label>legacy_mount_pfs (.ffpfs)</label>"
+          "<label class='switch' for='lme'></label></div>",
+          has_legacy_mp?"display:none;":"",cfg.legacy_mount_exfat?"checked":"");
+        H("<div class='row'><label>legacy_mount_pfs (.ffpfs) <span class='vbadge' style='%s'>ab 1.7alpha7</span></label>"
           "<input type='checkbox' id='lmp' name='legacy_mount_pfs' value='1' %s>"
-          "<label class='switch' for='lmp'></label></div>",cfg.legacy_mount_pfs?"checked":"");
-        H("<div class='row'><label>legacy_mount_pfsc (.ffpfsc)</label>"
+          "<label class='switch' for='lmp'></label></div>",
+          has_legacy_mp?"display:none;":"",cfg.legacy_mount_pfs?"checked":"");
+        H("<div class='row'><label>legacy_mount_pfsc (.ffpfsc) <span class='vbadge' style='%s'>ab 1.7alpha7</span></label>"
           "<input type='checkbox' id='lmpc' name='legacy_mount_pfsc' value='1' %s>"
-          "<label class='switch' for='lmpc'></label></div>",cfg.legacy_mount_pfsc?"checked":"");
-        H("<div class='row'><label>legacy_gddr5_cache</label>"
+          "<label class='switch' for='lmpc'></label></div>",
+          has_legacy_mp?"display:none;":"",cfg.legacy_mount_pfsc?"checked":"");
+        H("<div class='row'><label>legacy_gddr5_cache <span class='vbadge' style='%s'>ab 1.7alpha7</span></label>"
           "<input type='checkbox' id='lgc' name='legacy_gddr5_cache' value='1' %s>"
-          "<label class='switch' for='lgc'></label></div>",cfg.legacy_gddr5_cache?"checked":"");
+          "<label class='switch' for='lgc'></label></div>",
+          has_legacy_mp?"display:none;":"",cfg.legacy_gddr5_cache?"checked":"");
         H("</div>");
         H("</div></div>"); /* close backend section + panel-bkd */
 

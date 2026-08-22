@@ -128,7 +128,11 @@ typedef enum {
     LS_ICON_FRONT = 116,
     LS_ICON_FRONT_LABEL = 117,
     LS_ALWAYS_RESTART_SM = 118,
-    LS_COUNT = 119
+    LS_LEGACY_MOUNT = 119,
+    LS_EMUS = 120,
+    LS_UPDATE_EMUS = 121,
+    LS_EMUS_PATH = 122,
+    LS_COUNT = 123
 } LangStrId;
 
 static int ui_lang = LANG_EN;
@@ -254,6 +258,10 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "Icon-Position",
         "Icon immer nach vorne schieben",
         "SM immer neu starten (auch wenn l\u00e4uft)",
+        "Legacy Mount-Profile",
+        "Emulatoren",
+        "Emulatoren aus Ordner aktualisieren",
+        "Emulator-Ordner",
     },
     /* EN */ {
         "running",
@@ -374,6 +382,10 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "Icon Position",
         "Always move icon to front",
         "Always restart SM (even if running)",
+        "Legacy Mount Profiles",
+        "Emulators",
+        "Update emulators from folder",
+        "Emulators path",
     },
     /* FR */ {
         "actif",
@@ -495,6 +507,10 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "Position de l'ic\u00f4ne",
         "Toujours mettre l'ic\u00f4ne au premier plan",
         "Toujours red\u00e9marrer SM (m\u00eame si actif)",
+        "Profils de montage h\u00e9rit\u00e9s",
+        "\u00c9mulateurs",
+        "Mettre \u00e0 jour les \u00e9mulateurs depuis le dossier",
+        "Dossier des \u00e9mulateurs",
     },
     /* ES */ {
         "activo",
@@ -616,6 +632,10 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "Posici\u00f3n del icono",
         "Siempre mover el icono al frente",
         "Siempre reiniciar SM (incluso si est\u00e1 activo)",
+        "Perfiles de montaje heredados",
+        "Emuladores",
+        "Actualizar emuladores desde la carpeta",
+        "Ruta de emuladores",
     }
 };
 

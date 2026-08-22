@@ -1,8 +1,68 @@
 # SMPlusGui
 
-A web-based configuration UI for [ShadowMountPlus](https://github.com/drakmor/ShadowMountPlus) running directly on the PS5 as a payload ELF.
+A fun side project — a web-based config UI for [ShadowMountPlus](https://github.com/drakmor/ShadowMountPlus) that runs as a PS5 payload. Built for personal use with AI assistance.
 
-Opens at **http://\<PS5-IP\>:7070** from any browser — PS5, phone, laptop.
+Opens at **http://\<PS5-IP\>:7070** from any browser.
+
+---
+
+## What it does
+
+- Configure all ShadowMountPlus settings from a browser (no FTP, no text editor)
+- Autostart SM automatically when the GUI launches
+- Manage config backups (create, restore, copy to/from USB)
+- View SM debug log live
+- Start/Stop SM via elfldr
+- Recovers automatically after PS5 rest mode
+- Works on PS5 browser, phone, and desktop
+- German, English, French, Spanish + auto PS5 language detection
+
+---
+
+## Requirements
+
+- Jailbroken PS5
+- [ShadowMountPlus](https://github.com/drakmor/ShadowMountPlus)
+- A payload loader (e.g. [Payload Manager](https://github.com/itsPLK/ps5-payload-manager))
+- elfldr on port 9021/9020 (for SM Start and Autostart)
+
+---
+
+## Build
+
+```bash
+export PS5_PAYLOAD_SDK=/path/to/ps5-payload-sdk
+make
+```
+
+---
+
+## Usage
+
+1. Load `SMPlusGui_1.0.0.elf`
+2. Open `http://<PS5-IP>:7070`
+3. Configure settings and hit **Save**
+
+App settings (autostart, icon) are stored in `/data/SMPlusGui/prefs.ini`.
+
+---
+
+## Credits
+
+- **[drakmor](https://github.com/drakmor)** — [ShadowMountPlus](https://github.com/drakmor/ShadowMountPlus)
+- **[itsPLK](https://github.com/itsPLK) / [najdek](https://github.com/najdek)** — [PS5 Payload Manager](https://github.com/itsPLK/ps5-payload-manager)
+- **[john-tornblom](https://github.com/john-tornblom)** — [PS5 Payload SDK](https://github.com/ps5-payload-dev)
+- **[Cesanta](https://github.com/cesanta)** — [Mongoose](https://github.com/cesanta/mongoose)
+- **[Lucide](https://lucide.dev)** — SVG icons
+- **[GitHub Copilot](https://github.com/features/copilot)** — Built with AI assistance (GitHub Copilot / Claude Sonnet)
+- PS5 homebrew community
+
+---
+
+## Disclaimer
+
+Unofficial homebrew. Use at your own risk. Not affiliated with Sony.
+
 
 ---
 

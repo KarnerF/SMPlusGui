@@ -1,7 +1,7 @@
 # SMPlusGui
 
-A fun side project — web-based config UI for [ShadowMountPlus](https://github.com/drakmor/ShadowMountPlus) running as a PS5 payload. Built with AI assistance.
-
+A fun side project ï¿½ web-based config UI for [ShadowMountPlus](https://github.com/drakmor/ShadowMountPlus) running as a PS5 payload. Built with AI assistance.
+Configure all SM settings from any browser, manage config backups, view the debug log, and autostart SM on launch.
 Opens at **http://\<PS5-IP\>:7070**
 
 ---
@@ -33,12 +33,12 @@ make
 
 ## Credits
 
-- **[drakmor](https://github.com/drakmor)** — [ShadowMountPlus](https://github.com/drakmor/ShadowMountPlus)
-- **[itsPLK](https://github.com/itsPLK) / [najdek](https://github.com/najdek)** — [Payload Manager](https://github.com/itsPLK/ps5-payload-manager)
-- **[john-tornblom](https://github.com/john-tornblom)** — [PS5 Payload SDK](https://github.com/ps5-payload-dev)
-- **[Cesanta](https://github.com/cesanta)** — [Mongoose](https://github.com/cesanta/mongoose)
-- **[Lucide](https://lucide.dev)** — SVG icons
-- **[GitHub Copilot](https://github.com/features/copilot)** — Built with AI assistance
+- **[drakmor](https://github.com/drakmor)** ï¿½ [ShadowMountPlus](https://github.com/drakmor/ShadowMountPlus)
+- **[itsPLK](https://github.com/itsPLK) / [najdek](https://github.com/najdek)** ï¿½ [Payload Manager](https://github.com/itsPLK/ps5-payload-manager)
+- **[john-tornblom](https://github.com/john-tornblom)** ï¿½ [PS5 Payload SDK](https://github.com/ps5-payload-dev)
+- **[Cesanta](https://github.com/cesanta)** ï¿½ [Mongoose](https://github.com/cesanta/mongoose)
+- **[Lucide](https://lucide.dev)** ï¿½ SVG icons
+- **[GitHub Copilot](https://github.com/features/copilot)** ï¿½ Built with AI assistance
 - PS5 homebrew community
 
 ---

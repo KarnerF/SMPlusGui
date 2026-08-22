@@ -14,7 +14,6 @@ Opens at **http://\<PS5-IP\>:7070** from any browser.
 - View SM debug log live
 - Start/Stop SM via elfldr
 - Recovers automatically after PS5 rest mode
-- Works on PS5 browser, phone, and desktop
 - German, English, French, Spanish + auto PS5 language detection
 
 ---

@@ -372,7 +372,7 @@ typedef struct {
     int  legacy_mount_exfat;
     int  legacy_mount_pfs;
     int  legacy_mount_pfsc;
-    int  legacy_gddr5_cache;
+    int  nested_pfs_index_cache;
     int  update_emulators;
     char emulators_path[PATH_LEN];
     int  auto_update_ampr;
@@ -405,7 +405,7 @@ static void set_defaults(ShadowConfig *cfg) {
     strncpy(cfg->fan_target_temperature,"system",7);
     cfg->legacy_mount_ufs=1; cfg->legacy_mount_exfat=1;
     cfg->legacy_mount_pfs=1; cfg->legacy_mount_pfsc=1;
-    cfg->legacy_gddr5_cache=0;
+    cfg->nested_pfs_index_cache=0;
     cfg->update_emulators=1;
     strncpy(cfg->emulators_path,"/data/shadowmount/emus",PATH_LEN-1);
     cfg->auto_update_ampr=0;
@@ -464,7 +464,8 @@ static void load_config(ShadowConfig *cfg) {
         B("legacy_mount_exfat",legacy_mount_exfat)
         B("legacy_mount_pfs",legacy_mount_pfs)
         B("legacy_mount_pfsc",legacy_mount_pfsc)
-        B("legacy_gddr5_cache",legacy_gddr5_cache)
+        B("nested_pfs_index_cache",nested_pfs_index_cache)
+        B("legacy_gddr5_cache",nested_pfs_index_cache) /* old name alias */
         B("update_emulators",update_emulators)
         S("emulators_path",emulators_path,PATH_LEN)
         B("auto_update_ampr",auto_update_ampr)
@@ -555,7 +556,8 @@ static int save_config(ShadowConfig *cfg) {
         else if(MATCH("legacy_mount_exfat")&&!wlme){fprintf(out,"legacy_mount_exfat=%d\n",cfg->legacy_mount_exfat);wlme=1;}
         else if(MATCH("legacy_mount_pfs")&&!wlmp){fprintf(out,"legacy_mount_pfs=%d\n",cfg->legacy_mount_pfs);wlmp=1;}
         else if(MATCH("legacy_mount_pfsc")&&!wlmpc){fprintf(out,"legacy_mount_pfsc=%d\n",cfg->legacy_mount_pfsc);wlmpc=1;}
-        else if(MATCH("legacy_gddr5_cache")&&!wlgc){fprintf(out,"legacy_gddr5_cache=%d\n",cfg->legacy_gddr5_cache);wlgc=1;}
+        else if(MATCH("nested_pfs_index_cache")&&!wlgc){fprintf(out,"nested_pfs_index_cache=%d\n",cfg->nested_pfs_index_cache);wlgc=1;}
+        else if(MATCH("legacy_gddr5_cache")&&!wlgc){fprintf(out,"nested_pfs_index_cache=%d\n",cfg->nested_pfs_index_cache);wlgc=1;}
         else if(MATCH("update_emulators")&&!wue){fprintf(out,"update_emulators=%d\n",cfg->update_emulators);wue=1;}
         else if(MATCH("emulators_path")&&!wep){fprintf(out,"emulators_path=%s\n",cfg->emulators_path);wep=1;}
         else if(MATCH("auto_update_ampr")&&!waua){fprintf(out,"auto_update_ampr=%d\n",cfg->auto_update_ampr);waua=1;}
@@ -602,7 +604,7 @@ static int save_config(ShadowConfig *cfg) {
                 MATCH("exfat_backend")||MATCH("ufs_backend")||
                 MATCH("legacy_mount_ufs")||MATCH("legacy_mount_exfat")||
                 MATCH("legacy_mount_pfs")||MATCH("legacy_mount_pfsc")||
-                MATCH("legacy_gddr5_cache")||MATCH("update_emulators")||
+                MATCH("nested_pfs_index_cache")||MATCH("legacy_gddr5_cache")||MATCH("update_emulators")||
                 MATCH("emulators_path")||MATCH("auto_update_ampr")||MATCH("ampr_update_url")||
                 MATCH("lvd_exfat_sector_size")||MATCH("lvd_ufs_sector_size")||
                 MATCH("lvd_pfs_sector_size")||MATCH("md_exfat_sector_size")||
@@ -642,7 +644,7 @@ static int save_config(ShadowConfig *cfg) {
     if(!wlme)  fprintf(out,"legacy_mount_exfat=%d\n",cfg->legacy_mount_exfat);
     if(!wlmp)  fprintf(out,"legacy_mount_pfs=%d\n",cfg->legacy_mount_pfs);
     if(!wlmpc) fprintf(out,"legacy_mount_pfsc=%d\n",cfg->legacy_mount_pfsc);
-    if(!wlgc)  fprintf(out,"legacy_gddr5_cache=%d\n",cfg->legacy_gddr5_cache);
+    if(!wlgc)  fprintf(out,"nested_pfs_index_cache=%d\n",cfg->nested_pfs_index_cache);
     if(!wue)   fprintf(out,"update_emulators=%d\n",cfg->update_emulators);
     if(!wep)   fprintf(out,"emulators_path=%s\n",cfg->emulators_path);
     if(!waua)  fprintf(out,"auto_update_ampr=%d\n",cfg->auto_update_ampr);
@@ -1354,10 +1356,10 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "<input type='checkbox' id='lmpc' name='legacy_mount_pfsc' value='1' %s>"
           "<label class='switch' for='lmpc'></label></div>",
           has_legacy_mp?"display:none;":"",cfg.legacy_mount_pfsc?"checked":"");
-        H("<div class='row'><label>legacy_gddr5_cache <span class='vbadge' style='%s'>ab 1.7alpha7</span></label>"
-          "<input type='checkbox' id='lgc' name='legacy_gddr5_cache' value='1' %s>"
+        H("<div class='row'><label>nested_pfs_index_cache <span class='vbadge' style='%s'>ab 1.7alpha9</span></label>"
+          "<input type='checkbox' id='lgc' name='nested_pfs_index_cache' value='1' %s>"
           "<label class='switch' for='lgc'></label></div>",
-          has_legacy_mp?"display:none;":"",cfg.legacy_gddr5_cache?"checked":"");
+          has_legacy_mp?"display:none;":"",cfg.nested_pfs_index_cache?"checked":"");
         H("</div>");
         H("</div></div>"); /* close backend section + panel-bkd */
 
@@ -2187,7 +2189,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         GS("exfat_backend",exfat_backend) GS("ufs_backend",ufs_backend)
         GB("legacy_mount_ufs",legacy_mount_ufs) GB("legacy_mount_exfat",legacy_mount_exfat)
         GB("legacy_mount_pfs",legacy_mount_pfs) GB("legacy_mount_pfsc",legacy_mount_pfsc)
-        GB("legacy_gddr5_cache",legacy_gddr5_cache)
+        GB("nested_pfs_index_cache",nested_pfs_index_cache)
         GB("update_emulators",update_emulators) GS("emulators_path",emulators_path)
         GB("auto_update_ampr",auto_update_ampr) GS("ampr_update_url",ampr_update_url)
         GI("lvd_exfat_sector_size",lvd_exfat_sector_size)

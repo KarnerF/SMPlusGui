@@ -8,7 +8,7 @@ VERSION := 1.0.0
 TARGET  := SMPlusGui_v$(VERSION).elf
 CFLAGS  += -Wall -g -I. \
            -DPLATFORM_PS5 \
-           -DSMPLUS_VERSION=\"v$(VERSION)\" \
+           -DSMPLUS_VERSION=\"$(VERSION)\" \
            -DMG_ARCH=MG_ARCH_UNIX \
            -DMG_TLS=MG_TLS_NONE \
            -DMG_ENABLE_TCPIP=0 \

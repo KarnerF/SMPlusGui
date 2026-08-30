@@ -1107,7 +1107,6 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         H("<div class='nav-sep'></div>");
         H("<button type='button' class='nav-item' data-p='ovi' onclick='showP(this)'>%s</button>",L(LS_IMG_OVERRIDES));
         H("<button type='button' class='nav-item' data-p='man' onclick='showP(this)'>%s</button>",L(LS_MANUAL));
-        H("<button type='button' class='nav-item' data-p='spl' onclick='showP(this)'>%s</button>",L(LS_GAMES));
         H("<button type='button' class='nav-item' data-p='gen' onclick='showP(this)'>%s</button>",L(LS_NOTIFS));
         H("<button type='button' class='nav-item' data-p='log' onclick='showP(this)'>Log</button>");
         /* raw panel accessible via button in backup section, no sidebar tab */
@@ -1590,23 +1589,6 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         for(int i=0;i<manual_count;i++)
             H("<div class='path-row'><input type='text' name='manual[]' value='%s' placeholder='/mnt/usb0/PPSA12345.ffpkg'><button type='button' class='rm' onclick='this.parentElement.remove()'>&times;</button></div>",manual_entries[i]);
         H("</div><button type='button' class='addbtn' onclick='addRow(\"manual-list\",\"manual[]\",\"/mnt/usb0/PPSA12345.ffpkg\")'>+ %s</button>",L(LS_ADD_ENTRY));
-        H("</div></div>");
-
-        /* Panel: Spiele & Images (kombiniert) */
-        H("<div id='panel-spl' class='panel'><div class='section'>");
-        H("<div class='sublist-title'>%s</div>",L(LS_GAMES));
-        if(!has_api) H("<p class='hint'><span class='vbadge'>ab 1.7alpha3</span></p>");
-        H("<div style='display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;'>"
-          "<button type='button' onclick='loadGamePanel(0)' style='background:transparent;border:1px solid var(--border);"
-          "border-radius:6px;color:var(--dim);padding:5px 12px;cursor:pointer;font-family:var(--mono);font-size:.8rem;'>"
-          ICO("ref") " Refresh</button>"
-          "<button type='button' onclick='smRawDebug()' style='background:transparent;border:1px solid var(--border);"
-          "border-radius:6px;color:var(--dim);padding:5px 12px;cursor:pointer;font-family:var(--mono);font-size:.8rem;'>"
-          "Rohdaten</button></div>");
-        H("<div id='sm-raw-dbg' style='display:none;margin-bottom:10px;'>"
-          "<pre id='sm-raw-pre' style='background:#0a0f1a;border:1px solid var(--border);border-radius:6px;"
-          "padding:10px;font-size:.65rem;color:var(--dim);overflow:auto;max-height:200px;white-space:pre-wrap;'></pre></div>");
-        H("<div id='games-list'><p class='hint'>%s</p></div>",L(LS_LOADING));
         H("</div></div>");
 
         /* Panel: Debug Log */
@@ -2898,84 +2880,114 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         #undef SM_MANUAL
     }
     else if(mg_match(hm->uri,mg_str("/api/sm/gamelist"),NULL)){
-        /* images always available; enrich with title_name from games API when mounted */
-        char *img_json=sm_api_req("POST","/api/v1/images","{}");
-        char *gam_json=sm_api_req("POST","/api/v1/games","{}");
-        char *out=malloc(262144); if(!out){if(img_json)free(img_json);if(gam_json)free(gam_json);mg_http_reply(c,500,"","");return;}
+        /* scan filesystem directly like GC; SM API only for title_name enrichment */
+        char *gam_json=sm_api_req("POST","/api/v1/games","{}");  /* for title_name, may be NULL */
+        char *out=malloc(262144); if(!out){if(gam_json)free(gam_json);mg_http_reply(c,500,"","");return;}
         int pos=0;
         #define GL(fmt,...) pos+=snprintf(out+pos,262143-pos,fmt,##__VA_ARGS__)
-        if(!img_json){
-            GL("<p class=\"hint\" style=\"color:#f87171;\">SM API nicht erreichbar</p>");
-        } else {
-            const char *istart=strstr(img_json,"\"images\"");
-            if(!istart){GL("<p class=\"hint\">Keine Spiele gefunden</p>");}
-            else {
-                int n=0;
-                const char *cur=istart;
-                while((cur=strstr(cur,"{\"path\""))!=NULL&&pos<240000){
-                    char imgpath[512]={0},mp[256]={0};
-                    long long sz=0; int mounted=0;
-                    /* extract path, mount_point, size, mounted from images API */
-                    const char *pv=strstr(cur,"\"path\":\""); if(pv){pv+=8;const char *pe=strchr(pv,'"');if(pe&&pe-pv<(int)sizeof(imgpath)-1)memcpy(imgpath,pv,pe-pv);}
-                    const char *mv2=strstr(cur,"\"mount_point\":\""); if(mv2){mv2+=15;const char *me=strchr(mv2,'"');if(me&&me-mv2<(int)sizeof(mp)-1)memcpy(mp,mv2,me-mv2);}
-                    const char *sv=strstr(cur,"\"size\":"); if(sv){sv+=7;sz=strtoll(sv,NULL,10);}
-                    const char *mv=strstr(cur,"\"mounted\":"); if(mv){mv+=10;mounted=(mv[0]=='t');}
-                    /* extract title_id from mount_point: /mnt/shadowmnt/PPSA20515_name_hash */
-                    char tid[16]={0};
-                    const char *bn=strrchr(mp,'/'); bn=bn?bn+1:mp;
-                    char tmp[64]={0}; strncpy(tmp,bn,sizeof(tmp)-1);
-                    char *us=strchr(tmp,'_'); if(us)*us=0;
-                    if(strlen(tmp)==9){int ok=1;
-                        for(int i=0;i<4;i++) if(!isalpha((unsigned char)tmp[i])){ok=0;break;}
-                        for(int i=4;i<9;i++) if(!isdigit((unsigned char)tmp[i])){ok=0;break;}
-                        if(ok) strncpy(tid,tmp,sizeof(tid)-1);}
-                    /* look up title_name from games JSON if available */
-                    char dname[128]={0};
-                    if(tid[0]&&gam_json){
-                        char srch[32]; snprintf(srch,sizeof(srch),"\"title_id\":\"%s\"",tid);
-                        const char *gp=strstr(gam_json,srch);
-                        if(gp){const char *nn=strstr(gp,"\"title_name\":\"");
-                            if(nn){nn+=14;const char *ne=strchr(nn,'"');if(ne&&ne-nn<(int)sizeof(dname)-1)memcpy(dname,nn,ne-nn);}}
-                    }
-                    if(!dname[0]&&tid[0]) strncpy(dname,tid,sizeof(dname)-1);
-                    /* unescape path for stat */
-                    char rp[512]={0};{int ri=0;for(int i=0;imgpath[i]&&ri<(int)sizeof(rp)-1;i++){
-                        if(imgpath[i]=='\\'&&imgpath[i+1]=='/'){rp[ri++]='/';i++;}else rp[ri++]=imgpath[i];}}
-                    /* size from stat (more reliable than JSON size field) */
-                    char szbuf[32]={0};
-                    {struct stat ist;
-                     if(rp[0]&&stat(rp,&ist)==0){
-                         if(ist.st_size>1073741824) snprintf(szbuf,sizeof(szbuf),"%.2f GB",(double)ist.st_size/1073741824.0);
-                         else snprintf(szbuf,sizeof(szbuf),"%lld MB",(long long)ist.st_size/1048576);}
-                     else if(sz>0){
-                         if(sz>1073741824) snprintf(szbuf,sizeof(szbuf),"%.2f GB",(double)sz/1073741824.0);
-                         else snprintf(szbuf,sizeof(szbuf),"%lld MB",sz/1048576);}
-                     else strncpy(szbuf,"?",sizeof(szbuf)-1);}
-                    const char *mntcol=mounted?"color:#10b981":"color:var(--dim)";
-                    const char *mnttxt=mounted?"&#9679; aktiv":"&#9675; inaktiv";
-                    const char *bs_um="background:transparent;border:1px solid #f87171;border-radius:4px;color:#f87171;padding:3px 10px;cursor:pointer;font-size:.75rem;";
-                    const char *bs_mt="background:transparent;border:1px solid var(--accent);border-radius:4px;color:var(--accent);padding:3px 10px;cursor:pointer;font-size:.75rem;white-space:nowrap;";
-                    GL("<div style=\"display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--border);\">");
-                    GL("<div style=\"position:relative;width:48px;height:48px;border-radius:8px;overflow:hidden;background:#1e2a42;flex-shrink:0;\">"
-                       "<img src=\"/api/icon/%s?v=3\" style=\"position:absolute;top:0;left:0;width:100%%;height:100%%;object-fit:cover;\" onerror=\"this.remove()\">"
-                       "<span style=\"position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.55rem;color:#64748b;font-family:monospace;\">%.4s</span></div>",
-                       tid[0]?tid:"", tid[0]?tid:"?");
-                    GL("<div style=\"flex:1;min-width:0;\">"
-                       "<div style=\"font-size:.83rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;\">%s</div>"
-                       "<div style=\"font-family:var(--mono);font-size:.7rem;color:var(--dim);\">%s &mdash; %s</div></div>",
-                       dname[0]?dname:rp, tid[0]?tid:"–", szbuf);
-                    GL("<div style=\"display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;\">"
-                       "<span style=\"font-size:.75rem;%s;\">%s</span>"
-                       "<button type=\"button\" data-tid=\"%s\" data-path=\"%s\" onclick=\"%s(this.dataset.tid,this.dataset.path)\" style=\"%s\">%s</button>"
-                       "</div></div>",
-                       mntcol,mnttxt, tid,rp, mounted?"_smUnmount":"_smMount",
-                       mounted?bs_um:bs_mt, mounted?"Unmount":"Mount");
-                    n++; cur++;
+
+        /* directories to scan, same as GC */
+        static const char *scan_roots[]={
+            "/data/homebrew",
+            "/data/etaHEN/games",
+            "/mnt/ext0/homebrew",
+            "/mnt/ext1/homebrew",
+            "/mnt/usb0/homebrew","/mnt/usb1/homebrew","/mnt/usb2/homebrew",
+            "/mnt/usb3/homebrew","/mnt/usb4/homebrew","/mnt/usb5/homebrew",
+            "/mnt/usb6/homebrew","/mnt/usb7/homebrew",
+            "/mnt/usb0","/mnt/usb1","/mnt/usb2","/mnt/usb3",
+            "/mnt/usb4","/mnt/usb5","/mnt/usb6","/mnt/usb7",
+            NULL
+        };
+        /* supported image extensions */
+        static const char *exts[]={".exfat",".ffpfsc",".pkg",".iso",NULL};
+
+        /* dedup by source path */
+        char seen[64][512]; int nseen=0;
+        int n=0;
+
+        for(int ri=0;scan_roots[ri]&&pos<240000;ri++){
+            DIR *d=opendir(scan_roots[ri]); if(!d) continue;
+            struct dirent *de;
+            while((de=readdir(d))!=NULL&&pos<240000){
+                if(de->d_name[0]=='.') continue;
+                /* check extension */
+                int is_img=0;
+                const char *nm=de->d_name;
+                size_t nl=strlen(nm);
+                for(int ei=0;exts[ei];ei++){
+                    size_t el=strlen(exts[ei]);
+                    if(nl>el&&strcasecmp(nm+nl-el,exts[ei])==0){is_img=1;break;}
                 }
-                if(n==0) GL("<p class=\"hint\">Keine Spiele gefunden</p>");
+                /* also accept folders that look like games (have sce_sys) */
+                char fp[512]; snprintf(fp,sizeof(fp),"%s/%s",scan_roots[ri],nm);
+                if(!is_img){
+                    char sc[520]; snprintf(sc,sizeof(sc),"%s/sce_sys",fp);
+                    struct stat ss; if(stat(sc,&ss)==0&&S_ISDIR(ss.st_mode)) is_img=1;
+                }
+                if(!is_img) continue;
+                /* dedup */
+                int dup=0;
+                for(int s=0;s<nseen;s++) if(!strcmp(seen[s],fp)){dup=1;break;}
+                if(dup) continue;
+                if(nseen<64) strncpy(seen[nseen++],fp,511);
+                /* extract title_id: first 9 chars of filename if PPSA/CUSA pattern */
+                char tid[16]={0};
+                if(nl>=9){
+                    char tmp[10]={0}; strncpy(tmp,nm,9);
+                    int ok=1;
+                    for(int i=0;i<4;i++) if(!isalpha((unsigned char)tmp[i])){ok=0;break;}
+                    for(int i=4;i<9;i++) if(!isdigit((unsigned char)tmp[i])){ok=0;break;}
+                    if(ok) strncpy(tid,tmp,sizeof(tid)-1);
+                }
+                /* get title_name from SM games API response */
+                char dname[128]={0};
+                if(tid[0]&&gam_json){
+                    char srch[32]; snprintf(srch,sizeof(srch),"\"title_id\":\"%s\"",tid);
+                    const char *gp=strstr(gam_json,srch);
+                    if(gp){const char *nn=strstr(gp,"\"title_name\":\"");
+                        if(nn){nn+=14;const char *ne=strchr(nn,'"');if(ne&&ne-nn<(int)sizeof(dname)-1)memcpy(dname,nn,ne-nn);}}
+                }
+                if(!dname[0]) strncpy(dname,nm,sizeof(dname)-1);
+                /* check mounted status via SM games API */
+                int mounted=0;
+                if(tid[0]&&gam_json){
+                    char srch[32]; snprintf(srch,sizeof(srch),"\"title_id\":\"%s\"",tid);
+                    const char *gp=strstr(gam_json,srch);
+                    if(gp){const char *mv=strstr(gp,"\"mounted\":");
+                        if(mv){mv+=10;mounted=(mv[0]=='t');}}
+                }
+                /* get file size */
+                char szbuf[32]="?";
+                {struct stat st; if(stat(fp,&st)==0){
+                    off_t sz=st.st_size;
+                    if(S_ISDIR(st.st_mode)) strncpy(szbuf,"Ordner",sizeof(szbuf)-1);
+                    else if(sz>1073741824) snprintf(szbuf,sizeof(szbuf),"%.2f GB",(double)sz/1073741824.0);
+                    else snprintf(szbuf,sizeof(szbuf),"%lld MB",(long long)sz/1048576);}}
+                const char *mntcol=mounted?"color:#10b981":"color:var(--dim)";
+                const char *mnttxt=mounted?"&#9679; aktiv":"&#9675; inaktiv";
+                const char *bs_um="background:transparent;border:1px solid #f87171;border-radius:4px;color:#f87171;padding:3px 10px;cursor:pointer;font-size:.75rem;";
+                const char *bs_mt="background:transparent;border:1px solid var(--accent);border-radius:4px;color:var(--accent);padding:3px 10px;cursor:pointer;font-size:.75rem;white-space:nowrap;";
+                GL("<div style=\"display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--border);\">");
+                GL("<div style=\"position:relative;width:48px;height:48px;border-radius:8px;overflow:hidden;background:#1e2a42;flex-shrink:0;\">"
+                   "<img src=\"/api/icon/%s?v=3\" style=\"position:absolute;top:0;left:0;width:100%%;height:100%%;object-fit:cover;\" onerror=\"this.remove()\">"
+                   "<span style=\"position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.55rem;color:#64748b;font-family:monospace;\">%.4s</span></div>",
+                   tid[0]?tid:"", nm);
+                GL("<div style=\"flex:1;min-width:0;\">"
+                   "<div style=\"font-size:.83rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;\">%s</div>"
+                   "<div style=\"font-family:var(--mono);font-size:.7rem;color:var(--dim);\">%s &mdash; %s</div></div>",
+                   dname, tid[0]?tid:nm, szbuf);
+                GL("<div style=\"display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;\">"
+                   "<span style=\"font-size:.75rem;%s;\">%s</span>"
+                   "<button type=\"button\" data-tid=\"%s\" data-path=\"%s\" onclick=\"%s(this.dataset.tid,this.dataset.path)\" style=\"%s\">%s</button>"
+                   "</div></div>",
+                   mntcol,mnttxt, tid[0]?tid:"",fp, mounted?"_smUnmount":"_smMount",
+                   mounted?bs_um:bs_mt, mounted?"Unmount":"Mount");
+                n++;
             }
-            free(img_json);
+            closedir(d);
         }
+        if(n==0) GL("<p class=\"hint\">Keine Spiele gefunden &mdash; /data/homebrew/ und USB leer</p>");
         if(gam_json) free(gam_json);
         out[pos]=0;
         #undef GL

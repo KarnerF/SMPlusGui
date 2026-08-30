@@ -1800,7 +1800,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           /* use mount_point basename for direct icon lookup; CSS background silently fails if missing */
           "var mp=(img.mount_point||'').split('/').pop();"
           "var icurl=mp?'/api/game/icon?mp='+encodeURIComponent(mp):(tid?'/api/game/icon?title_id='+tid:'');"
-          "var icbg=icurl?'background-image:url('+icurl+');background-size:cover;':'';"
+          "var icbg=icurl?'background-image:url(\''+icurl+'\');background-size:cover;background-repeat:no-repeat;':'';"
           "var ic='<div style=\"width:48px;height:48px;border-radius:8px;background:#1e2a42;'+icbg+'flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.55rem;color:#64748b;font-family:monospace;\">'+(!img.mounted&&tid?tid.substring(0,4):'')+'</div>';"
           "h+='<div style=\"display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--border);\">'+ic;"
           "h+='<div style=\"flex:1;min-width:0;\">';"
@@ -2982,6 +2982,10 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         /* if not cached, try live mount paths and populate cache */
         if(!f){
             char src[256]; FILE *sf=NULL;
+            /* /user/appmeta/ is where PS5 stores app tile icons - confirmed accessible */
+            if(!sf){ snprintf(src,sizeof(src),"/user/appmeta/%s/icon0.png",tid); sf=fopen(src,"rb"); }
+            /* /user/appmeta/ is where PS5 stores app tile icons - confirmed accessible */
+            if(!sf){ snprintf(src,sizeof(src),"/user/appmeta/%s/icon0.png",tid); sf=fopen(src,"rb"); }
             /* /data/homebrew/{tid}/ is SM's symlink - most reliable path */
             if(!sf){ snprintf(src,sizeof(src),"/data/homebrew/%s/sce_sys/icon0.png",tid); sf=fopen(src,"rb"); }
             /* also try mount_point directly */

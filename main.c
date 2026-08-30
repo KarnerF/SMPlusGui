@@ -1797,10 +1797,10 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "var ba=img.mounted"
           "?'<button onclick=\"_smUnmount('+i+')\" style=\"background:transparent;border:1px solid #f87171;border-radius:4px;color:#f87171;padding:3px 10px;cursor:pointer;font-size:.75rem;\">Unmount</button>'"
           ":'<button onclick=\"_smMount('+i+')\" style=\"background:transparent;border:1px solid var(--accent);border-radius:4px;color:var(--accent);padding:3px 10px;cursor:pointer;font-size:.75rem;white-space:nowrap;\">Mount</button>';"
-          /* /api/icon/{tid} has no query string - safe in CSS url() and img src */
+          /* /api/icon/{tid} has no query string - safe in img src */
           "var ic=tid"
           "?'<div style=\"position:relative;width:48px;height:48px;border-radius:8px;overflow:hidden;background:#1e2a42;flex-shrink:0;\">'"
-          "+'<img src=\"/api/icon/'+tid+'\" style=\"position:absolute;top:0;left:0;width:100%%;height:100%%;object-fit:cover;\" onerror=\"this.style.display=none\">'+"
+          "+'<img src=\"/api/icon/'+tid+'\" style=\"position:absolute;top:0;left:0;width:100%%;height:100%%;object-fit:cover;\" onerror=\"this.remove()\">'"
           "+'<span style=\"position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.55rem;color:#64748b;font-family:monospace;\">'+tid.substring(0,4)+'</span></div>'"
           ":'<div style=\"width:48px;height:48px;border-radius:8px;background:#1e2a42;flex-shrink:0;\"></div>';"
           "h+='<div style=\"display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--border);\">'+ic;"

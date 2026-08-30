@@ -1780,32 +1780,17 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "if(!gd||gd.error||gd.status){"
           "gl.innerHTML='<p class=\"hint\" style=\"color:#f87171;\">SM API nicht erreichbar &mdash; l\\u00e4uft ShadowMountPlus?</p>';}"
           "else if(!gd.games||!gd.games.length){"
-          "if(_gpR<3){"
-          "gl.innerHTML='<p class=\"hint\">Warte auf SM... ('+(_gpR+1)+'/3)</p>';"
-          "setTimeout(function(){loadGamePanel(_gpR+1);},5000);"
+          "if(_gpR<2){"
+          "gl.innerHTML='<p class=\"hint\">Warte auf SM... ('+(_gpR+1)+'/2)</p>';"
+          "setTimeout(function(){loadGamePanel(_gpR+1);},4000);"
           "}else{"
-          "gl.innerHTML='<p class=\"hint\">Keine Spiele &mdash; SM scan noch aktiv?</p>';"
+          "fetch('/api/local/games').then(function(r){return r.json();})"
+          ".then(function(ld){"
+          "if(ld.games&&ld.games.length)renderGamesList(gl,ld.games);"
+          "else gl.innerHTML='<p class=\"hint\">Keine Spiele &mdash; noch nichts gemountet?</p>';"
+          "}).catch(function(){gl.innerHTML='<p class=\"hint\">Keine Spiele gefunden</p>';});"
           "}}"
-          "else{_gpR=0;var h='';"
-          "gd.games.forEach(function(g){"
-          "var tid=g.title_id||'';"
-          "var mn=g.mounted"
-          "?'<span style=\"color:#10b981;font-size:.75rem;\">&#9679; aktiv</span>'"
-          ":'<span style=\"color:var(--dim);font-size:.75rem;\">&#9675; inaktiv</span>';"
-          "var ba=g.mounted"
-          "?'<button onclick=\"unmountGame(\\'' +tid+'\\')\" style=\"background:transparent;border:1px solid #f87171;border-radius:4px;color:#f87171;padding:3px 10px;cursor:pointer;font-size:.75rem;white-space:nowrap;\">Unmount</button>'"
-          ":'<button onclick=\"mountGame(\\'' +tid+'\\')\" style=\"background:transparent;border:1px solid var(--accent);border-radius:4px;color:var(--accent);padding:3px 10px;cursor:pointer;font-size:.75rem;white-space:nowrap;\">Mount</button>';"
-          "var ip2=g.image_path?'<div style=\"font-size:.65rem;color:var(--dim);margin-top:2px;font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;\">'+g.image_path+'</div>':'';"
-          "h+='<div style=\"display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--border);\">';"
-          "h+='<img src=\"/api/game/icon?title_id='+tid+'\" width=\"48\" height=\"48\"';"
-          "h+=' style=\"border-radius:8px;object-fit:cover;flex-shrink:0;background:#1e2a42;\"';"
-          "h+=' onerror=\"this.style.display=\\'none\\'\">';"
-          "h+='<div style=\"flex:1;min-width:0;\">';"
-          "h+='<div style=\"font-size:.83rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;\">'+(g.title_name||tid)+'</div>';"
-          "h+='<div style=\"font-family:var(--mono);font-size:.7rem;color:var(--dim);\">'+tid+'</div>';"
-          "h+=ip2+'</div>';"
-          "h+='<div style=\"display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;\">'+mn+ba+'</div></div>';"
-          "});gl.innerHTML=h;}"
+          "else{_gpR=0;renderGamesList(gl,gd.games);}"
           "if(!il)return;"
           "if(!id||id.error||id.status){"
           "il.innerHTML='<p class=\"hint\" style=\"color:#f87171;font-size:.78rem;\">'+(id&&id.error?id.error:'nicht erreichbar')+'</p>';return;}"
@@ -1836,6 +1821,29 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "ih+='<td style=\"padding:6px 8px;text-align:center;\">'+iba+'</td></tr>';"
           "});ih+='</table>';il.innerHTML=ih;});}"
           "function loadGames(){loadGamePanel(0);}"
+          "function renderGamesList(el,games){"
+          "if(!el||!games||!games.length){if(el)el.innerHTML='<p class=\"hint\">Keine Spiele gefunden</p>';return;}"
+          "var h='';"
+          "games.forEach(function(g){"
+          "var tid=g.title_id||'';"
+          "var mn=g.mounted"
+          "?'<span style=\"color:#10b981;font-size:.75rem;\">&#9679; aktiv</span>'"
+          ":'<span style=\"color:var(--dim);font-size:.75rem;\">&#9675; inaktiv</span>';"
+          "var ba=g.mounted"
+          "?'<button onclick=\"unmountGame(\\'' +tid+'\\')\" style=\"background:transparent;border:1px solid #f87171;border-radius:4px;color:#f87171;padding:3px 10px;cursor:pointer;font-size:.75rem;white-space:nowrap;\">Unmount</button>'"
+          ":'<button onclick=\"mountGame(\\'' +tid+'\\')\" style=\"background:transparent;border:1px solid var(--accent);border-radius:4px;color:var(--accent);padding:3px 10px;cursor:pointer;font-size:.75rem;white-space:nowrap;\">Mount</button>';"
+          "var sp=g.source_path||g.image_path||'';"
+          "var ip2=sp?'<div style=\"font-size:.65rem;color:var(--dim);margin-top:2px;font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;\">'+sp+'</div>':'';"
+          "h+='<div style=\"display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--border);\">';"
+          "h+='<img src=\"/api/game/icon?title_id='+tid+'\" width=\"48\" height=\"48\"';"
+          "h+=' style=\"border-radius:8px;object-fit:cover;flex-shrink:0;background:#1e2a42;\"';"
+          "h+=' onerror=\"this.style.display=\\'none\\'\">';"
+          "h+='<div style=\"flex:1;min-width:0;\">';"
+          "h+='<div style=\"font-size:.83rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;\">'+(g.title_name||tid)+'</div>';"
+          "h+='<div style=\"font-family:var(--mono);font-size:.7rem;color:var(--dim);\">'+tid+'</div>';"
+          "h+=ip2+'</div>';"
+          "h+='<div style=\"display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;\">'+mn+ba+'</div></div>';"
+          "});el.innerHTML=h;}"
           "function mountGame(tid){"
           "var el=document.getElementById('games-list');"
           "if(el)el.innerHTML='<p class=\"hint\">Mounting '+tid+'...</p>';"
@@ -2866,6 +2874,54 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         }
         write_prefs(&p);
         mg_http_reply(c,200,"Content-Type: application/json\r\n","{\"ok\":true}");
+    }
+    else if(mg_match(hm->uri,mg_str("/api/local/games"),NULL)){
+        /* filesystem scan: /data/homebrew/ entries whose names are PS5 title IDs */
+        char *out=malloc(65536); if(!out){mg_http_reply(c,500,"","");return;}
+        int pos=0;
+        #define AP(fmt,...) pos+=snprintf(out+pos,65535-pos,fmt,##__VA_ARGS__)
+        AP("{\"games\":[");
+        int first=1;
+        static const char *scan_dirs[]=
+            {"/data/homebrew","/data/etaHEN/games","/mnt/ext0/homebrew",NULL};
+        /* track which title_ids we've already emitted */
+        char seen[64][10]; int nseen=0;
+        for(int di=0;scan_dirs[di]&&pos<60000;di++){
+            DIR *d=opendir(scan_dirs[di]); if(!d) continue;
+            struct dirent *de;
+            while((de=readdir(d))!=NULL&&pos<60000){
+                const char *nm=de->d_name;
+                /* PS5 title ID: exactly 9 alnum chars, first 4 alpha, last 5 digit */
+                if(strlen(nm)!=9) continue;
+                int ok=1;
+                for(int i=0;i<4;i++) if(!isalpha((unsigned char)nm[i])){ok=0;break;}
+                for(int i=4;i<9;i++) if(!isdigit((unsigned char)nm[i])){ok=0;break;}
+                if(!ok) continue;
+                /* dedup across directories */
+                int dup=0;
+                for(int s=0;s<nseen;s++) if(!strcmp(seen[s],nm)){dup=1;break;}
+                if(dup) continue;
+                if(nseen<64) {strncpy(seen[nseen++],nm,9);seen[nseen-1][9]=0;}
+                /* mounted = symlink/dir resolves via stat */
+                char gp[128]; snprintf(gp,sizeof(gp),"%s/%s",scan_dirs[di],nm);
+                struct stat st; int mounted=(stat(gp,&st)==0);
+                /* resolve symlink target for source_path */
+                char src[256]={0};
+                if(readlink(gp,src,sizeof(src)-1)<0) snprintf(src,sizeof(src),"%s",gp);
+                if(!first) AP(",");
+                AP("{\"title_id\":\"%s\",\"title_name\":\"%s\","
+                   "\"source_path\":\"%s\",\"mounted\":%s}",
+                   nm,nm,src,mounted?"true":"false");
+                first=0;
+            }
+            closedir(d);
+        }
+        #undef AP
+        out[pos]=0;
+        /* close array - append image-only entries from SM if available */
+        snprintf(out+pos,65535-pos,"]}");
+        mg_http_reply(c,200,"Content-Type: application/json\r\n","%s",out);
+        free(out);
     }
     else if(mg_match(hm->uri,mg_str("/api/game/icon"),NULL)){
         char tid[64]={0}; mg_http_get_var(&hm->query,"title_id",tid,sizeof(tid));

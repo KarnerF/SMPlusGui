@@ -2946,6 +2946,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
             }
             static const char *icon_tpl[]={
                 "/data/homebrew/%s/sce_sys/icon0.png",
+                "/user/appmeta/%s/icon0.png",
                 "/data/etaHEN/games/%s/sce_sys/icon0.png",
                 "/mnt/ext0/homebrew/%s/sce_sys/icon0.png",
                 "/mnt/usb0/%s/sce_sys/icon0.png",
@@ -2969,6 +2970,20 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
                         }
                     }
                     closedir(sd);
+                }
+            }
+            /* GC icon cache: already-resized PNGs from Game Compressor */
+            if(!sf&&tid[0]){
+                DIR *gc=opendir("/data/GameCompressor/icon-cache");
+                if(gc){
+                    struct dirent *de; size_t tlen=strlen(tid);
+                    while(!sf&&(de=readdir(gc))!=NULL){
+                        if(strncmp(de->d_name,tid,tlen)==0&&de->d_name[tlen]=='-'){
+                            snprintf(src,sizeof(src),"/data/GameCompressor/icon-cache/%s",de->d_name);
+                            sf=fopen(src,"rb");
+                        }
+                    }
+                    closedir(gc);
                 }
             }
             if(sf){

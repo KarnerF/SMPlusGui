@@ -1789,7 +1789,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "var h='';window._smG=[];"
           "imgs.forEach(function(img,i){"
           "var tid=smTid(img.mount_point);"
-          "window._smG.push({tid:tid,path:img.path||'',mounted:img.mounted});"
+          "window._smG.push({tid:tid,path:img.path||'',mp:(img.mount_point||'').split('/').pop(),mounted:img.mounted});"
           "var fn=(img.path||'').split('/').pop();"
           "var sz=img.size?(img.size>1073741824?(img.size/1073741824).toFixed(2)+' GB':(img.size/1048576).toFixed(0)+' MB'):'?';"
           "var mn=img.mounted?'<span style=\"color:#10b981;font-size:.75rem;\">&#9679; aktiv</span>'"
@@ -1797,8 +1797,10 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "var ba=img.mounted"
           "?'<button onclick=\"_smUnmount('+i+')\" style=\"background:transparent;border:1px solid #f87171;border-radius:4px;color:#f87171;padding:3px 10px;cursor:pointer;font-size:.75rem;\">Unmount</button>'"
           ":'<button onclick=\"_smMount('+i+')\" style=\"background:transparent;border:1px solid var(--accent);border-radius:4px;color:var(--accent);padding:3px 10px;cursor:pointer;font-size:.75rem;white-space:nowrap;\">Mount</button>';"
-          /* CSS background-image: loads silently, no broken image icon if missing */
-          "var icbg=tid?'background-image:url(/api/game/icon?title_id='+tid+');background-size:cover;':'';"
+          /* use mount_point basename for direct icon lookup; CSS background silently fails if missing */
+          "var mp=(img.mount_point||'').split('/').pop();"
+          "var icurl=mp?'/api/game/icon?mp='+encodeURIComponent(mp):(tid?'/api/game/icon?title_id='+tid:'');"
+          "var icbg=icurl?'background-image:url('+icurl+');background-size:cover;':'';"
           "var ic='<div style=\"width:48px;height:48px;border-radius:8px;background:#1e2a42;'+icbg+'flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.55rem;color:#64748b;font-family:monospace;\">'+(!img.mounted&&tid?tid.substring(0,4):'')+'</div>';"
           "h+='<div style=\"display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--border);\">'+ic;"
           "h+='<div style=\"flex:1;min-width:0;\">';"
@@ -1806,6 +1808,9 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "h+='<div style=\"font-family:var(--mono);font-size:.7rem;color:var(--dim);\">'+(tid||'–')+'<span style=\"font-size:.65rem;\"> &mdash; '+sz+'</span></div>';"
           "h+='</div><div style=\"display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;\">'+mn+ba+'</div></div>';"
           "});gl.innerHTML=h;"
+          /* auto-refresh once after 8s if all games still unmounted (SM still starting) */
+          "if(_gpR===0&&imgs.length&&imgs.every(function(x){return !x.mounted;})){"
+          "setTimeout(function(){if(_gpR===0)loadGamePanel(1);},8000);}"
           "}else{"
           "gl.innerHTML=((!gd||gd.error||gd.status)?'<p class=\"hint\" style=\"color:#f87171;\">SM API nicht erreichbar &mdash; l\\u00e4uft ShadowMountPlus?</p>':'<p class=\"hint\">Keine Spiele gefunden</p>');"
           "}});}"
@@ -2919,15 +2924,26 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
     }
     else if(mg_match(hm->uri,mg_str("/api/game/icon"),NULL)){
         char tid[64]={0}; mg_http_get_var(&hm->query,"title_id",tid,sizeof(tid));
-        /* sanitise: only alphanumeric title IDs allowed */
+        char mp[128]={0};  mg_http_get_var(&hm->query,"mp",mp,sizeof(mp));
+        /* sanitise mp: only alnum, dot, underscore */
+        for(int i=0;mp[i];i++) if(!isalnum((unsigned char)mp[i])&&mp[i]!='_'&&mp[i]!='-'){mp[0]=0;break;}
+        /* sanitise tid: only alphanumeric */
         for(int i=0;tid[i];i++) if(!isalnum((unsigned char)tid[i])){tid[0]=0;break;}
-        if(!tid[0]){mg_http_reply(c,404,"","");return;}
+        if(!tid[0]&&!mp[0]){mg_http_reply(c,404,"","");return;}
         #define SMG_ICON_CACHE "/data/SMPlusGui/icon-cache"
-        char cache[128]; snprintf(cache,sizeof(cache),SMG_ICON_CACHE "/%s.png",tid);
+        /* cache key: prefer mp over tid since mp is more specific */
+        char ckey[128]; snprintf(ckey,sizeof(ckey),"%s",mp[0]?mp:tid);
+        char cache[256]; snprintf(cache,sizeof(cache),SMG_ICON_CACHE "/%s.png",ckey);
         /* serve from our own cache if available */
         FILE *f=fopen(cache,"rb");
         /* if not cached, try live mount paths and populate cache */
         if(!f){
+            char src[256]; FILE *sf=NULL;
+            /* try mount_point path first (most direct) */
+            if(mp[0]&&!sf){
+                snprintf(src,sizeof(src),"/mnt/shadowmnt/%s/sce_sys/icon0.png",mp);
+                sf=fopen(src,"rb");
+            }
             static const char *icon_tpl[]={
                 "/data/homebrew/%s/sce_sys/icon0.png",
                 "/data/etaHEN/games/%s/sce_sys/icon0.png",
@@ -2937,13 +2953,12 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
                 "/system_data/priv/appmeta/%s/icon0.png",
                 NULL
             };
-            char src[256]; FILE *sf=NULL;
-            for(int i=0;icon_tpl[i]&&!sf;i++){
+            if(tid[0]) for(int i=0;icon_tpl[i]&&!sf;i++){
                 snprintf(src,sizeof(src),icon_tpl[i],tid);
                 sf=fopen(src,"rb");
             }
-            /* scan /mnt/shadowmnt/ for {titleId}_* (SM's actual mount location) */
-            if(!sf){
+            /* scan /mnt/shadowmnt/ for {titleId}_* if no direct mp hit */
+            if(!sf&&tid[0]){
                 DIR *sd=opendir("/mnt/shadowmnt");
                 if(sd){
                     struct dirent *de; size_t tlen=strlen(tid);

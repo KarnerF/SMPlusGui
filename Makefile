@@ -5,10 +5,10 @@ else
 endif
 
 VERSION := 1.0.0
-TARGET  := SMPlusGui_$(VERSION).elf
+TARGET  := SMPlusGui_v$(VERSION).elf
 CFLAGS  += -Wall -g -I. \
            -DPLATFORM_PS5 \
-           -DSMPLUS_VERSION=\"$(VERSION)\" \
+           -DSMPLUS_VERSION=\"v$(VERSION)\" \
            -DMG_ARCH=MG_ARCH_UNIX \
            -DMG_TLS=MG_TLS_NONE \
            -DMG_ENABLE_TCPIP=0 \

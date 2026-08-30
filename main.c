@@ -1797,11 +1797,12 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "var ba=img.mounted"
           "?'<button onclick=\"_smUnmount('+i+')\" style=\"background:transparent;border:1px solid #f87171;border-radius:4px;color:#f87171;padding:3px 10px;cursor:pointer;font-size:.75rem;\">Unmount</button>'"
           ":'<button onclick=\"_smMount('+i+')\" style=\"background:transparent;border:1px solid var(--accent);border-radius:4px;color:var(--accent);padding:3px 10px;cursor:pointer;font-size:.75rem;white-space:nowrap;\">Mount</button>';"
-          /* use mount_point basename for direct icon lookup; CSS background silently fails if missing */
-          "var mp=(img.mount_point||'').split('/').pop();"
-          "var icurl=mp?'/api/game/icon?mp='+encodeURIComponent(mp):(tid?'/api/game/icon?title_id='+tid:'');"
-          "var icbg=icurl?'background-image:url(\''+icurl+'\');background-size:cover;background-repeat:no-repeat;':'';"
-          "var ic='<div style=\"width:48px;height:48px;border-radius:8px;background:#1e2a42;'+icbg+'flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.55rem;color:#64748b;font-family:monospace;\">'+(!img.mounted&&tid?tid.substring(0,4):'')+'</div>';"
+          /* /api/icon/{tid} has no query string - safe in CSS url() and img src */
+          "var ic=tid"
+          "?'<div style=\"position:relative;width:48px;height:48px;border-radius:8px;overflow:hidden;background:#1e2a42;flex-shrink:0;\">'"
+          "+'<img src=\"/api/icon/'+tid+'\" style=\"position:absolute;top:0;left:0;width:100%%;height:100%%;object-fit:cover;\" onerror=\"this.style.display=none\">'+"
+          "+'<span style=\"position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.55rem;color:#64748b;font-family:monospace;\">'+tid.substring(0,4)+'</span></div>'"
+          ":'<div style=\"width:48px;height:48px;border-radius:8px;background:#1e2a42;flex-shrink:0;\"></div>';"
           "h+='<div style=\"display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--border);\">'+ic;"
           "h+='<div style=\"flex:1;min-width:0;\">';"
           "h+='<div style=\"font-size:.83rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;\">'+fn+'</div>';"
@@ -2929,6 +2930,58 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         tv[1]=tv[0]; utimes(SM_MANUAL,tv);
         mg_http_reply(c,200,"Content-Type: application/json\r\n","{\"ok\":true}");
         #undef SM_MANUAL
+    }
+    else if(mg_match(hm->uri,mg_str("/api/icon/*"),NULL)){
+        /* clean path-based icon endpoint: /api/icon/PPSA20515 */
+        const char *p=hm->uri.buf+9; /* skip "/api/icon/" */
+        size_t plen=hm->uri.len-9;
+        char tid[64]={0};
+        if(plen>0&&plen<sizeof(tid)){
+            memcpy(tid,p,plen); tid[plen]=0;
+            for(size_t i=0;tid[i];i++) if(!isalnum((unsigned char)tid[i])){tid[0]=0;break;}
+        }
+        if(!tid[0]){mg_http_reply(c,404,"","");return;}
+        #define SMG_IC2 "/data/SMPlusGui/icon-cache"
+        char cache2[256]; snprintf(cache2,sizeof(cache2),SMG_IC2"/%s.png",tid);
+        FILE *fi=fopen(cache2,"rb");
+        if(!fi){
+            /* try /user/appmeta first (confirmed accessible), then other paths */
+            static const char *ptpl[]={
+                "/user/appmeta/%s/icon0.png",
+                "/data/homebrew/%s/sce_sys/icon0.png",
+                "/mnt/ext0/homebrew/%s/sce_sys/icon0.png",
+                NULL
+            };
+            char src[256]; FILE *sf=NULL;
+            for(int i=0;ptpl[i]&&!sf;i++){snprintf(src,sizeof(src),ptpl[i],tid);sf=fopen(src,"rb");}
+            /* scan /mnt/shadowmnt/ for {tid}_* */
+            if(!sf){DIR *sd=opendir("/mnt/shadowmnt");if(sd){struct dirent *de;size_t tl=strlen(tid);
+                while(!sf&&(de=readdir(sd))!=NULL)if(strncmp(de->d_name,tid,tl)==0&&de->d_name[tl]=='_')
+                    {snprintf(src,sizeof(src),"/mnt/shadowmnt/%s/sce_sys/icon0.png",de->d_name);sf=fopen(src,"rb");}
+                closedir(sd);}
+            }
+            if(sf){
+                fseek(sf,0,SEEK_END);long isz=ftell(sf);fseek(sf,0,SEEK_SET);
+                if(isz>0&&isz<=524288){
+                    char *ibuf=malloc(isz);
+                    if(ibuf&&(fread(ibuf,1,isz,sf)==(size_t)isz)){
+                        mkdir("/data/SMPlusGui",0777);mkdir(SMG_IC2,0777);
+                        FILE *cf=fopen(cache2,"wb");if(cf){fwrite(ibuf,1,isz,cf);fclose(cf);}
+                        mg_http_reply(c,200,"Content-Type: image/png\r\nCache-Control: max-age=86400\r\n","%.*s",(int)isz,ibuf);
+                        free(ibuf);fclose(sf);return;
+                    }free(ibuf);
+                }fclose(sf);
+            }
+            mg_http_reply(c,404,"","");return;
+            #undef SMG_IC2
+        }
+        fseek(fi,0,SEEK_END);long sz2=ftell(fi);fseek(fi,0,SEEK_SET);
+        if(sz2<=0||sz2>524288){fclose(fi);mg_http_reply(c,404,"","");return;}
+        char *buf2=malloc(sz2);if(!buf2){fclose(fi);mg_http_reply(c,500,"","");return;}
+        fread(buf2,1,sz2,fi);fclose(fi);
+        mg_http_reply(c,200,"Content-Type: image/png\r\nCache-Control: max-age=86400\r\n","%.*s",(int)sz2,buf2);
+        free(buf2);
+        #undef SMG_IC2
     }
     else if(mg_match(hm->uri,mg_str("/api/game/icon-check"),NULL)){
         char tid[64]={0}; mg_http_get_var(&hm->query,"title_id",tid,sizeof(tid));

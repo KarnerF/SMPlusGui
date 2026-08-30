@@ -241,48 +241,6 @@ static void get_sm_version(char *buf, size_t buflen) {
 }
 
 /* Generic SM API proxy - returns malloc'd body or NULL */
-/* base64-encode binary data; out must be at least ceil(in_len/3)*4+1 bytes */
-static void b64enc(const unsigned char *in, size_t len, char *out) {
-    static const char t[]="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    size_t i=0,j=0;
-    for(;i+2<len;i+=3){
-        out[j++]=t[in[i]>>2];out[j++]=t[((in[i]&3)<<4)|(in[i+1]>>4)];
-        out[j++]=t[((in[i+1]&15)<<2)|(in[i+2]>>6)];out[j++]=t[in[i+2]&63];
-    }
-    if(i<len){
-        out[j++]=t[in[i]>>2];
-        if(i+1<len){out[j++]=t[((in[i]&3)<<4)|(in[i+1]>>4)];out[j++]=t[(in[i+1]&15)<<2];out[j++]='=';}
-        else{out[j++]=t[(in[i]&3)<<4];out[j++]='=';out[j++]='=';}
-    }
-    out[j]=0;
-}
-
-/* read icon file and return malloc'd base64 string, or NULL; skip if > 30KB */
-static char *icon_b64(const char *tid) {
-    /* check our cache first, then /user/appmeta/ (SM installs all tiles there) */
-    char src[256]; FILE *f=NULL;
-    snprintf(src,sizeof(src),"/data/SMPlusGui/icon-cache/%s.png",tid); f=fopen(src,"rb");
-    if(!f){snprintf(src,sizeof(src),"/user/appmeta/%s/icon0.png",tid); f=fopen(src,"rb");}
-    if(!f){snprintf(src,sizeof(src),"/data/homebrew/%s/sce_sys/icon0.png",tid); f=fopen(src,"rb");}
-    if(!f) return NULL;
-    fseek(f,0,SEEK_END);long sz=ftell(f);fseek(f,0,SEEK_SET);
-    if(sz<=0||sz>30720){fclose(f);return NULL;}  /* skip icons > 30KB */
-    unsigned char *buf=malloc(sz);
-    if(!buf){fclose(f);return NULL;}
-    if((long)fread(buf,1,sz,f)!=sz){free(buf);fclose(f);return NULL;}
-    fclose(f);
-    /* write to cache if found elsewhere */
-    {char cp[256];snprintf(cp,sizeof(cp),"/data/SMPlusGui/icon-cache/%s.png",tid);
-     struct stat cs; if(stat(cp,&cs)!=0){mkdir("/data/SMPlusGui",0777);mkdir("/data/SMPlusGui/icon-cache",0777);
-         FILE *cf=fopen(cp,"wb");if(cf){fwrite(buf,1,sz,cf);fclose(cf);}}}
-    size_t b64sz=((sz+2)/3)*4+1;
-    char *out=malloc(b64sz);
-    if(!out){free(buf);return NULL;}
-    b64enc(buf,sz,out);
-    free(buf);
-    return out;
-}
-
 static char* sm_api_req(const char *method, const char *path, const char *body) {
     int sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock < 0) return NULL;
@@ -2943,9 +2901,9 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         /* images always available; enrich with title_name from games API when mounted */
         char *img_json=sm_api_req("POST","/api/v1/images","{}");
         char *gam_json=sm_api_req("POST","/api/v1/games","{}");
-        char *out=malloc(1048576); if(!out){if(img_json)free(img_json);if(gam_json)free(gam_json);mg_http_reply(c,500,"","");return;}
+        char *out=malloc(262144); if(!out){if(img_json)free(img_json);if(gam_json)free(gam_json);mg_http_reply(c,500,"","");return;}
         int pos=0;
-        #define GL(fmt,...) pos+=snprintf(out+pos,1048575-pos,fmt,##__VA_ARGS__)
+        #define GL(fmt,...) pos+=snprintf(out+pos,262143-pos,fmt,##__VA_ARGS__)
         if(!img_json){
             GL("<p class=\"hint\" style=\"color:#f87171;\">SM API nicht erreichbar</p>");
         } else {
@@ -2954,7 +2912,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
             else {
                 int n=0;
                 const char *cur=istart;
-                while((cur=strstr(cur,"{\"path\""))!=NULL&&pos<900000){
+                while((cur=strstr(cur,"{\"path\""))!=NULL&&pos<240000){
                     char imgpath[512]={0},mp[256]={0};
                     long long sz=0; int mounted=0;
                     /* extract path, mount_point, size, mounted from images API */
@@ -2998,12 +2956,10 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
                     const char *bs_um="background:transparent;border:1px solid #f87171;border-radius:4px;color:#f87171;padding:3px 10px;cursor:pointer;font-size:.75rem;";
                     const char *bs_mt="background:transparent;border:1px solid var(--accent);border-radius:4px;color:var(--accent);padding:3px 10px;cursor:pointer;font-size:.75rem;white-space:nowrap;";
                     GL("<div style=\"display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--border);\">");
-                    /* inline base64 icon — no separate HTTP request, works on all devices */
-                    {char *b64=tid[0]?icon_b64(tid):NULL;
-                     if(b64){GL("<div style=\"width:48px;height:48px;border-radius:8px;overflow:hidden;flex-shrink:0;\">"
-                        "<img src=\"data:image/png;base64,%s\" style=\"width:100%%;height:100%%;object-fit:cover;\"></div>",b64);free(b64);}
-                     else GL("<div style=\"width:48px;height:48px;border-radius:8px;background:#1e2a42;flex-shrink:0;display:flex;align-items:center;"
-                        "justify-content:center;font-size:.55rem;color:#64748b;font-family:monospace;\">%.4s</div>",tid[0]?tid:"?");}
+                    GL("<div style=\"position:relative;width:48px;height:48px;border-radius:8px;overflow:hidden;background:#1e2a42;flex-shrink:0;\">"
+                       "<img src=\"/api/icon/%s?v=3\" style=\"position:absolute;top:0;left:0;width:100%%;height:100%%;object-fit:cover;\" onerror=\"this.remove()\">"
+                       "<span style=\"position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.55rem;color:#64748b;font-family:monospace;\">%.4s</span></div>",
+                       tid[0]?tid:"", tid[0]?tid:"?");
                     GL("<div style=\"flex:1;min-width:0;\">"
                        "<div style=\"font-size:.83rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;\">%s</div>"
                        "<div style=\"font-family:var(--mono);font-size:.7rem;color:var(--dim);\">%s &mdash; %s</div></div>",

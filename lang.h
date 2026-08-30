@@ -132,7 +132,9 @@ typedef enum {
     LS_EMUS = 120,
     LS_UPDATE_EMUS = 121,
     LS_EMUS_PATH = 122,
-    LS_COUNT = 123
+    LS_GAMES = 123,
+    LS_IMAGES = 124,
+    LS_COUNT = 125
 } LangStrId;
 
 static int ui_lang = LANG_EN;
@@ -262,6 +264,8 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "Emulatoren",
         "Emulatoren aus Ordner aktualisieren",
         "Emulator-Ordner",
+        "Spiele",
+        "Images",
     },
     /* EN */ {
         "running",
@@ -386,6 +390,8 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "Emulators",
         "Update emulators from folder",
         "Emulators path",
+        "Games",
+        "Images",
     },
     /* FR */ {
         "actif",
@@ -511,6 +517,8 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "\u00c9mulateurs",
         "Mettre \u00e0 jour les \u00e9mulateurs depuis le dossier",
         "Dossier des \u00e9mulateurs",
+        "Jeux",
+        "Images",
     },
     /* ES */ {
         "activo",
@@ -636,6 +644,8 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "Emuladores",
         "Actualizar emuladores desde la carpeta",
         "Ruta de emuladores",
+        "Juegos",
+        "Im\u00e1genes",
     }
 };
 

@@ -886,6 +886,33 @@ static int send_elf_to_elfldr(const char *path) {
     return err ? -3 : 0;
 }
 
+/* Proxy POST to SM API on port 10101; caller must free() returned string */
+static char *sm_api_post(const char *path, const char *body) {
+    int sock=socket(AF_INET,SOCK_STREAM,0); if(sock<0) return NULL;
+    struct timeval tv={3,0};
+    setsockopt(sock,SOL_SOCKET,SO_RCVTIMEO,&tv,sizeof(tv));
+    setsockopt(sock,SOL_SOCKET,SO_SNDTIMEO,&tv,sizeof(tv));
+    struct sockaddr_in addr; memset(&addr,0,sizeof(addr));
+    addr.sin_family=AF_INET; addr.sin_port=htons(10101);
+    addr.sin_addr.s_addr=inet_addr("127.0.0.1");
+    if(connect(sock,(struct sockaddr*)&addr,sizeof(addr))!=0){close(sock);return NULL;}
+    char req[512];
+    snprintf(req,sizeof(req),"POST %s HTTP/1.0\r\nHost: 127.0.0.1\r\n"
+        "Content-Type: application/json\r\nContent-Length: %zu\r\n\r\n%s",
+        path,strlen(body),body);
+    send(sock,req,strlen(req),0);
+    char *buf=malloc(131072); if(!buf){close(sock);return NULL;}
+    size_t total=0; ssize_t n;
+    while((n=recv(sock,buf+total,131071-total,0))>0) total+=n;
+    buf[total]=0; close(sock);
+    char *bs=strstr(buf,"\r\n\r\n");
+    if(!bs){free(buf);return NULL;} bs+=4;
+    size_t bl=total-(size_t)(bs-buf);
+    char *result=malloc(bl+1); if(!result){free(buf);return NULL;}
+    memcpy(result,bs,bl); result[bl]=0;
+    free(buf); return result;
+}
+
 static void fn(struct mg_connection *c, int ev, void *ev_data) {
     if(ev!=MG_EV_HTTP_MSG) return;
     struct mg_http_message *hm=(struct mg_http_message*)ev_data;
@@ -1107,6 +1134,8 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         H("<div class='nav-sep'></div>");
         H("<button type='button' class='nav-item' data-p='ovi' onclick='showP(this)'>%s</button>",L(LS_IMG_OVERRIDES));
         H("<button type='button' class='nav-item' data-p='man' onclick='showP(this)'>%s</button>",L(LS_MANUAL));
+        H("<button type='button' class='nav-item' data-p='spl' onclick='showP(this)'>%s</button>",L(LS_GAMES));
+        H("<button type='button' class='nav-item' data-p='img' onclick='showP(this)'>%s</button>",L(LS_IMAGES));
         H("<button type='button' class='nav-item' data-p='gen' onclick='showP(this)'>%s</button>",L(LS_NOTIFS));
         H("<button type='button' class='nav-item' data-p='log' onclick='showP(this)'>Log</button>");
         /* raw panel accessible via button in backup section, no sidebar tab */
@@ -1591,6 +1620,28 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         H("</div><button type='button' class='addbtn' onclick='addRow(\"manual-list\",\"manual[]\",\"/mnt/usb0/PPSA12345.ffpkg\")'>+ %s</button>",L(LS_ADD_ENTRY));
         H("</div></div>");
 
+        /* Panel: Spiele */
+        H("<div id='panel-spl' class='panel'><div class='section'>");
+        H("<div class='sublist-title'>%s</div>",L(LS_GAMES));
+        if(!has_api) H("<p class='hint'><span class='vbadge'>ab 1.7alpha3</span></p>");
+        H("<div style='display:flex;gap:8px;margin-bottom:12px;'>"
+          "<button type='button' onclick='loadGames()' style='background:transparent;border:1px solid var(--border);"
+          "border-radius:6px;color:var(--dim);padding:5px 12px;cursor:pointer;font-family:var(--mono);font-size:.8rem;'>"
+          ICO("ref") " Refresh</button></div>");
+        H("<div id='games-list'><p class='hint'>%s</p></div>",L(LS_LOADING));
+        H("</div></div>");
+
+        /* Panel: Images */
+        H("<div id='panel-img' class='panel'><div class='section'>");
+        H("<div class='sublist-title'>%s</div>",L(LS_IMAGES));
+        if(!has_api) H("<p class='hint'><span class='vbadge'>ab 1.7alpha3</span></p>");
+        H("<div style='display:flex;gap:8px;margin-bottom:12px;'>"
+          "<button type='button' onclick='loadImages()' style='background:transparent;border:1px solid var(--border);"
+          "border-radius:6px;color:var(--dim);padding:5px 12px;cursor:pointer;font-family:var(--mono);font-size:.8rem;'>"
+          ICO("ref") " Refresh</button></div>");
+        H("<div id='images-list'><p class='hint'>%s</p></div>",L(LS_LOADING));
+        H("</div></div>");
+
         /* Panel: Debug Log */
         H("<div id='panel-log' class='panel'><div class='section' style='padding:14px 16px;'>");
         H("<div class='sublist-title'>Log</div>");
@@ -1697,6 +1748,8 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "sessionStorage.setItem('panel',el.getAttribute('data-p'));"
           "if(el.getAttribute('data-p')==='log')refreshLog();"
           "if(el.getAttribute('data-p')==='raw'){rawLoad();}"
+          "if(el.getAttribute('data-p')==='spl')loadGames();"
+          "if(el.getAttribute('data-p')==='img')loadImages();"
           "var ct=document.querySelector('.content');if(ct)ct.scrollTop=0;}"          /* restore panel after USB-triggered reload */
           "var _rp=sessionStorage.getItem('panel');"
           "if(_rp){var _rb=document.querySelector('.nav-item[data-p=\"'+_rp+'\"]');if(_rb)showP(_rb);}"
@@ -1751,7 +1804,56 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "if(l){l.textContent=nm;l.title=path;l.style.display='inline';}if(b)b.style.display='inline';}"
           "setTimeout(refreshStatus,2000);})"
           ".catch(function(){if(btn)btn.disabled=false;});}""function showElfPicker(btn,paths,cb){var old=document.getElementById('sm-elf-picker');if(old)old.remove();var picker=document.createElement('div');picker.id='sm-elf-picker';picker.style.cssText='position:fixed;top:0;left:0;width:100%%;height:100%%;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:9999;';var box=document.createElement('div');box.style.cssText='background:#0d111a;border:1px solid #1e2a42;border-radius:14px;padding:36px;min-width:500px;max-width:800px;';var title=document.createElement('p');title.style.cssText='margin:0 0 20px;font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:#64748b;font-family:monospace;';title.textContent=_t.sel_sm;box.appendChild(title);paths.forEach(function(p){var b=document.createElement('button');b.style.cssText='display:block;width:100%%;margin-bottom:10px;padding:16px 18px;border-radius:8px;border:1px solid #1e2a42;background:#131927;color:#e2e8f0;cursor:pointer;text-align:left;font-family:monospace;font-size:.75rem;word-break:break-all;';b.textContent=p;b.onclick=function(){picker.remove();if(cb)cb(p);else launchElf(btn,p);};box.appendChild(b);});var cancel=document.createElement('button');cancel.style.cssText='display:block;width:100%%;padding:14px;border-radius:8px;border:1px solid #1e2a42;background:transparent;color:#64748b;cursor:pointer;font-family:monospace;font-size:.75rem;margin-top:6px;';cancel.textContent=_t.cancel;cancel.onclick=function(){picker.remove();};box.appendChild(cancel);picker.appendChild(box);document.body.appendChild(picker);}""document.querySelector('form').addEventListener('keydown',function(e){""if(e.key==='Enter'&&e.target.tagName!=='BUTTON')e.preventDefault();""});"
-"function addPath(){"
+"function loadGames(){"
+          "var el=document.getElementById('games-list');if(!el)return;"
+          "el.innerHTML='<p class=\"hint\">Lade...</p>';"
+          "fetch('/api/sm/games',{method:'POST'}).then(function(r){return r.json();})"
+          ".then(function(d){"
+          "if(!d.games||!d.games.length){el.innerHTML='<p class=\"hint\">Keine Spiele gefunden</p>';return;}"
+          "var h='<table style=\"width:100%;border-collapse:collapse;font-size:.78rem;\">';"
+          "h+='<tr style=\"border-bottom:1px solid var(--border);color:var(--dim);font-size:.7rem;\">';"
+          "h+='<th style=\"text-align:left;padding:4px 8px;\">Titel</th>';"
+          "h+='<th style=\"text-align:left;padding:4px 8px;\">ID</th>';"
+          "h+='<th style=\"padding:4px 8px;\">Mount</th>';"
+          "h+='<th style=\"padding:4px 8px;\"></th></tr>';"
+          "d.games.forEach(function(g){"
+          "var mn=g.mounted?'<span style=\"color:#10b981;\">&#9679;</span>':'<span style=\"color:var(--dim);\">&#9675;</span>';"
+          "var ba=g.mounted"
+          "?'<button onclick=\"unmountGame(\\'' +g.title_id+'\\')\" style=\"background:transparent;border:1px solid #f87171;border-radius:4px;color:#f87171;padding:2px 8px;cursor:pointer;font-size:.7rem;\">Unmount</button>'"
+          ":'<button onclick=\"mountGame(\\'' +g.title_id+'\\')\" style=\"background:transparent;border:1px solid var(--accent);border-radius:4px;color:var(--accent);padding:2px 8px;cursor:pointer;font-size:.7rem;\">Mount</button>';"
+          "h+='<tr style=\"border-bottom:1px solid var(--border);\">';"
+          "h+='<td style=\"padding:6px 8px;\">'+g.title_name+'</td>';"
+          "h+='<td style=\"padding:6px 8px;font-family:var(--mono);font-size:.72rem;\">'+g.title_id+'</td>';"
+          "h+='<td style=\"padding:6px 8px;text-align:center;\">'+mn+'</td>';"
+          "h+='<td style=\"padding:6px 8px;text-align:center;\">'+ba+'</td></tr>';"
+          "});h+='</table>';el.innerHTML=h;})"
+          ".catch(function(){el.innerHTML='<p class=\"hint\" style=\"color:#f87171;\">SM API nicht erreichbar</p>';});}"
+          "function mountGame(tid){fetch('/api/sm/games/mount?title_id='+encodeURIComponent(tid),{method:'POST'})"
+          ".then(function(){setTimeout(loadGames,1500);}).catch(function(){alert(_t.err);});}"
+          "function unmountGame(tid){fetch('/api/sm/games/unmount?title_id='+encodeURIComponent(tid),{method:'POST'})"
+          ".then(function(){setTimeout(loadGames,1500);}).catch(function(){alert(_t.err);});}"
+          "function loadImages(){"
+          "var el=document.getElementById('images-list');if(!el)return;"
+          "el.innerHTML='<p class=\"hint\">Lade...</p>';"
+          "fetch('/api/sm/images',{method:'POST'}).then(function(r){return r.json();})"
+          ".then(function(d){"
+          "if(!d.images||!d.images.length){el.innerHTML='<p class=\"hint\">Keine Images gefunden</p>';return;}"
+          "var h='<table style=\"width:100%;border-collapse:collapse;font-size:.78rem;\">';"
+          "h+='<tr style=\"border-bottom:1px solid var(--border);color:var(--dim);font-size:.7rem;\">';"
+          "h+='<th style=\"text-align:left;padding:4px 8px;\">Datei</th>';"
+          "h+='<th style=\"padding:4px 8px;\">Gr\\u00f6\\u00dfe</th>';"
+          "h+='<th style=\"padding:4px 8px;\">Mount</th></tr>';"
+          "d.images.forEach(function(img){"
+          "var fn=img.path?img.path.split('/').pop():'';"
+          "var sz=img.size?(img.size>1073741824?(img.size/1073741824).toFixed(1)+' GB':(img.size/1048576).toFixed(0)+' MB'):'?';"
+          "var st=img.mounted?'<span style=\"color:#10b981;\">&#9679;</span>':'<span style=\"color:var(--dim);\">&#9675;</span>';"
+          "h+='<tr style=\"border-bottom:1px solid var(--border);\">';"
+          "h+='<td style=\"padding:6px 8px;font-family:var(--mono);font-size:.72rem;\">'+fn+'</td>';"
+          "h+='<td style=\"padding:6px 8px;text-align:center;\">'+sz+'</td>';"
+          "h+='<td style=\"padding:6px 8px;text-align:center;\">'+st+'</td></tr>';"
+          "});h+='</table>';el.innerHTML=h;})"
+          ".catch(function(){el.innerHTML='<p class=\"hint\" style=\"color:#f87171;\">SM API nicht erreichbar</p>';});}"
+          "function addPath(){"
           "var c=document.getElementById('paths-list');"
           "var d=document.createElement('div');d.className='path-row';"
           "d.innerHTML='<input type=\"text\" name=\"paths[]\" placeholder=\"/data/homebrew\"><button type=\"button\" '"
@@ -2770,6 +2872,25 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         }
         write_prefs(&p);
         mg_http_reply(c,200,"Content-Type: application/json\r\n","{\"ok\":true}");
+    }
+    else if(mg_match(hm->uri,mg_str("/api/sm/games"),NULL)||
+            mg_match(hm->uri,mg_str("/api/sm/images"),NULL)){
+        const char *smpath=mg_match(hm->uri,mg_str("/api/sm/games"),NULL)?"/api/v1/games":"/api/v1/images";
+        char *r=sm_api_post(smpath,"{}");
+        if(!r) mg_http_reply(c,503,"Content-Type: application/json\r\n","{\"status\":503,\"error\":\"SM API not available\"}");
+        else { mg_http_reply(c,200,"Content-Type: application/json\r\n","%s",r); free(r); }
+    }
+    else if(mg_match(hm->uri,mg_str("/api/sm/games/mount"),NULL)||
+            mg_match(hm->uri,mg_str("/api/sm/games/unmount"),NULL)){
+        char tid[32]={0}; mg_http_get_var(&hm->query,"title_id",tid,sizeof(tid));
+        if(!tid[0]) { mg_http_reply(c,400,"Content-Type: application/json\r\n","{\"error\":\"missing title_id\"}"); }
+        else {
+            char body[64]; snprintf(body,sizeof(body),"{\"title_id\":\"%s\"}",tid);
+            const char *smpath=mg_match(hm->uri,mg_str("/api/sm/games/mount"),NULL)?"/api/v1/games/mount":"/api/v1/games/unmount";
+            char *r=sm_api_post(smpath,body);
+            if(!r) mg_http_reply(c,503,"Content-Type: application/json\r\n","{\"status\":503,\"error\":\"SM API not available\"}");
+            else { mg_http_reply(c,200,"Content-Type: application/json\r\n","%s",r); free(r); }
+        }
     }
     else mg_http_reply(c,404,"","404");
 }

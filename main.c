@@ -2861,28 +2861,55 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         /* sanitise: only alphanumeric title IDs allowed */
         for(int i=0;tid[i];i++) if(!isalnum((unsigned char)tid[i])){tid[0]=0;break;}
         if(!tid[0]){mg_http_reply(c,404,"","");return;}
-        /* try paths in order: homebrew folder, etaHEN, USB, system appmeta */
-        static const char *icon_tpl[]={
-            "/data/homebrew/%s/sce_sys/icon0.png",
-            "/data/etaHEN/games/%s/sce_sys/icon0.png",
-            "/mnt/ext0/homebrew/%s/sce_sys/icon0.png",
-            "/mnt/usb0/%s/sce_sys/icon0.png",
-            "/mnt/usb1/%s/sce_sys/icon0.png",
-            "/system_data/priv/appmeta/%s/icon0.png",
-            NULL
-        };
-        char p[256]; FILE *f=NULL;
-        for(int i=0;icon_tpl[i]&&!f;i++){
-            snprintf(p,sizeof(p),icon_tpl[i],tid);
-            f=fopen(p,"rb");
+        #define SMG_ICON_CACHE "/data/SMPlusGui/icon-cache"
+        char cache[128]; snprintf(cache,sizeof(cache),SMG_ICON_CACHE "/%s.png",tid);
+        /* serve from our own cache if available */
+        FILE *f=fopen(cache,"rb");
+        /* if not cached, try live mount paths and populate cache */
+        if(!f){
+            static const char *icon_tpl[]={
+                "/data/homebrew/%s/sce_sys/icon0.png",
+                "/data/etaHEN/games/%s/sce_sys/icon0.png",
+                "/mnt/ext0/homebrew/%s/sce_sys/icon0.png",
+                "/mnt/usb0/%s/sce_sys/icon0.png",
+                "/mnt/usb1/%s/sce_sys/icon0.png",
+                "/mnt/usb2/%s/sce_sys/icon0.png",
+                "/mnt/usb3/%s/sce_sys/icon0.png",
+                "/system_data/priv/appmeta/%s/icon0.png",
+                NULL
+            };
+            char src[256]; FILE *sf=NULL;
+            for(int i=0;icon_tpl[i]&&!sf;i++){
+                snprintf(src,sizeof(src),icon_tpl[i],tid);
+                sf=fopen(src,"rb");
+            }
+            if(sf){
+                /* read source icon */
+                fseek(sf,0,SEEK_END); long isz=ftell(sf); fseek(sf,0,SEEK_SET);
+                if(isz>0&&isz<=524288){
+                    char *ibuf=malloc(isz);
+                    if(ibuf&&(fread(ibuf,1,isz,sf)==(size_t)isz)){
+                        /* save to our cache */
+                        mkdir("/data/SMPlusGui",0777);
+                        mkdir(SMG_ICON_CACHE,0777);
+                        FILE *cf=fopen(cache,"wb");
+                        if(cf){fwrite(ibuf,1,isz,cf);fclose(cf);}
+                        /* serve directly from buffer */
+                        fclose(sf); free(ibuf);
+                        /* re-open from cache so code path is unified */
+                        f=fopen(cache,"rb");
+                    } else { free(ibuf); fclose(sf); }
+                } else { fclose(sf); }
+            }
         }
         if(!f){mg_http_reply(c,404,"","");return;}
         fseek(f,0,SEEK_END); long sz=ftell(f); fseek(f,0,SEEK_SET);
         if(sz<=0||sz>524288){fclose(f);mg_http_reply(c,404,"","");return;}
         char *buf=malloc(sz); if(!buf){fclose(f);mg_http_reply(c,500,"","");return;}
         fread(buf,1,sz,f); fclose(f);
-        mg_http_reply(c,200,"Content-Type: image/png\r\nCache-Control: max-age=3600\r\n","%.*s",(int)sz,buf);
+        mg_http_reply(c,200,"Content-Type: image/png\r\nCache-Control: max-age=86400\r\n","%.*s",(int)sz,buf);
         free(buf);
+        #undef SMG_ICON_CACHE
     }
     else if(mg_match(hm->uri,mg_str("/api/sm/games"),NULL)||
             mg_match(hm->uri,mg_str("/api/sm/images"),NULL)){

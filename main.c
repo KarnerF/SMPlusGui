@@ -1784,28 +1784,34 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "var gd=res[0],id=res[1];"
           "if(!gl)return;"
           "var imgs=id&&id.images?id.images:[];"
-          /* if SM games API works and has data, show it; otherwise fall back to images */
+          /* title_id from mount_point: /mnt/shadowmnt/PPSA20515_name_hash -> PPSA20515 */
+          "function smTid(img){"
+          "var mp=(img.mount_point||'').split('/').pop();"
+          "var t=mp.split('_')[0];"
+          "return(t.length===9&&/^[A-Za-z]{4}\\d{5}$/.test(t))?t:'';"
+          "}"
           "if(gd&&!gd.error&&!gd.status&&gd.games&&gd.games.length){"
           "_gpR=0;renderGamesList(gl,gd.games);"
           "}else if(imgs.length){"
-          /* SM games DB empty: build game cards directly from the images list */
           "var h='';"
           "imgs.forEach(function(img){"
-          "var parts=(img.path||'').split('/');"
-          "var fn=parts.pop()||img.path;"
+          "var tid=smTid(img);"
+          "var fn=(img.path||'').split('/').pop();"
+          "var sz=img.size?(img.size>1073741824?(img.size/1073741824).toFixed(2)+' GB':(img.size/1048576).toFixed(0)+' MB'):'?';"
           "var mn=img.mounted"
           "?'<span style=\"color:#10b981;font-size:.75rem;\">&#9679; aktiv</span>'"
           ":'<span style=\"color:var(--dim);font-size:.75rem;\">&#9675; inaktiv</span>';"
-          "var ba=img.mounted"
-          "?(img.title_id?'<button onclick=\"unmountGame(\\\''+img.title_id+'\\\')\" style=\"background:transparent;border:1px solid #f87171;border-radius:4px;color:#f87171;padding:3px 10px;cursor:pointer;font-size:.75rem;\">Unmount</button>':'')"
+          "var ba=tid?(img.mounted"
+          "?'<button onclick=\"unmountGame(\\\''+tid+'\\\')\" style=\"background:transparent;border:1px solid #f87171;border-radius:4px;color:#f87171;padding:3px 10px;cursor:pointer;font-size:.75rem;\">Unmount</button>'"
+          ":'<button onclick=\"mountGame(\\\''+tid+'\\\')\" style=\"background:transparent;border:1px solid var(--accent);border-radius:4px;color:var(--accent);padding:3px 10px;cursor:pointer;font-size:.75rem;white-space:nowrap;\">Mount</button>')"
           ":'<button onclick=\"manualMount(\\\''+img.path+'\\\')\" style=\"background:transparent;border:1px solid var(--accent);border-radius:4px;color:var(--accent);padding:3px 10px;cursor:pointer;font-size:.75rem;white-space:nowrap;\">Mount</button>';"
-          "var tid=img.title_id||'';"
           "h+='<div style=\"display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--border);\">';"
-          "h+=(tid?'<img src=\"/api/game/icon?title_id='+tid+'\" width=\"48\" height=\"48\" style=\"border-radius:8px;object-fit:cover;flex-shrink:0;background:#1e2a42;\" onerror=\"this.style.display=\\'none\\'\">':\"\");"
+          "h+='<img src=\"/api/game/icon?title_id='+tid+'\" width=\"48\" height=\"48\"';"
+          "h+=' style=\"border-radius:8px;object-fit:cover;flex-shrink:0;background:#1e2a42;\"';"
+          "h+=' onerror=\"this.style.display=\\'none\\'\">';"
           "h+='<div style=\"flex:1;min-width:0;\">';"
           "h+='<div style=\"font-size:.83rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;\">'+fn+'</div>';"
-          "h+=(tid?'<div style=\"font-family:var(--mono);font-size:.7rem;color:var(--dim);\">'+tid+'</div>':'');"
-          "h+='<div style=\"font-family:var(--mono);font-size:.65rem;color:var(--dim);\">'+img.path+'</div>';"
+          "h+='<div style=\"font-family:var(--mono);font-size:.7rem;color:var(--dim);\">'+tid+'<span style=\"color:var(--dim);font-size:.65rem;\"> &mdash; '+sz+'</span></div>';"
           "h+='</div>';"
           "h+='<div style=\"display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;\">'+mn+ba+'</div></div>';"
           "});gl.innerHTML=h;"
@@ -1830,9 +1836,11 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "var ext=fn.indexOf('.')>-1?fn.split('.').pop().toUpperCase():'';"
           "var sz=img.size?(img.size>1073741824?(img.size/1073741824).toFixed(2)+' GB':(img.size/1048576).toFixed(0)+' MB'):'?';"
           "var st=img.mounted?'<span style=\"color:#10b981;\">&#9679; aktiv</span>':'<span style=\"color:var(--dim);\">&#9675;</span>';"
-          "var itid=img.title_id||'';"
+          "var itid=smTid(img);"
           "var ipath=img.path||'';"
           "var iba=img.mounted"
+          "?(itid?'<button onclick=\"unmountGame(\\\''+itid+'\\\')\" style=\"background:transparent;border:1px solid #f87171;border-radius:4px;color:#f87171;padding:2px 8px;cursor:pointer;font-size:.7rem;\">Unmount</button>':'<span style=\"color:#10b981;font-size:.7rem;\">&#9679;</span>')"
+          ":(itid?'<button onclick=\"mountGame(\\\''+itid+'\\\')\" style=\"background:transparent;border:1px solid var(--accent);border-radius:4px;color:var(--accent);padding:2px 8px;cursor:pointer;font-size:.7rem;\">Mount</button>':'<button onclick=\"manualMount(\\\''+ipath+'\\\')\" style=\"background:transparent;border:1px solid var(--accent);border-radius:4px;color:var(--accent);padding:2px 8px;cursor:pointer;font-size:.7rem;\">Mount</button>');"
           "?(itid?'<button onclick=\"unmountGame(\\\''+itid+'\\\')\" style=\"background:transparent;border:1px solid #f87171;border-radius:4px;color:#f87171;padding:2px 8px;cursor:pointer;font-size:.7rem;\">Unmount</button>':'<span style=\"color:#10b981;font-size:.7rem;\">&#9679; aktiv</span>')"
           ":'<button onclick=\"manualMount(\\\''+ipath+'\\\')\" style=\"background:transparent;border:1px solid var(--accent);border-radius:4px;color:var(--accent);padding:2px 8px;cursor:pointer;font-size:.7rem;\">Mount</button>';"
           "ih+='<tr style=\"border-bottom:1px solid var(--border);\">';"
@@ -2957,8 +2965,6 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
                 "/mnt/ext0/homebrew/%s/sce_sys/icon0.png",
                 "/mnt/usb0/%s/sce_sys/icon0.png",
                 "/mnt/usb1/%s/sce_sys/icon0.png",
-                "/mnt/usb2/%s/sce_sys/icon0.png",
-                "/mnt/usb3/%s/sce_sys/icon0.png",
                 "/system_data/priv/appmeta/%s/icon0.png",
                 NULL
             };
@@ -2966,6 +2972,20 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
             for(int i=0;icon_tpl[i]&&!sf;i++){
                 snprintf(src,sizeof(src),icon_tpl[i],tid);
                 sf=fopen(src,"rb");
+            }
+            /* scan /mnt/shadowmnt/ for {titleId}_* (SM's actual mount location) */
+            if(!sf){
+                DIR *sd=opendir("/mnt/shadowmnt");
+                if(sd){
+                    struct dirent *de; size_t tlen=strlen(tid);
+                    while(!sf&&(de=readdir(sd))!=NULL){
+                        if(strncmp(de->d_name,tid,tlen)==0&&de->d_name[tlen]=='_'){
+                            snprintf(src,sizeof(src),"/mnt/shadowmnt/%s/sce_sys/icon0.png",de->d_name);
+                            sf=fopen(src,"rb");
+                        }
+                    }
+                    closedir(sd);
+                }
             }
             if(sf){
                 /* read source icon */

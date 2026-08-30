@@ -1108,7 +1108,6 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         H("<button type='button' class='nav-item' data-p='ovi' onclick='showP(this)'>%s</button>",L(LS_IMG_OVERRIDES));
         H("<button type='button' class='nav-item' data-p='man' onclick='showP(this)'>%s</button>",L(LS_MANUAL));
         H("<button type='button' class='nav-item' data-p='spl' onclick='showP(this)'>%s</button>",L(LS_GAMES));
-        H("<button type='button' class='nav-item' data-p='img' onclick='showP(this)'>%s</button>",L(LS_IMAGES));
         H("<button type='button' class='nav-item' data-p='gen' onclick='showP(this)'>%s</button>",L(LS_NOTIFS));
         H("<button type='button' class='nav-item' data-p='log' onclick='showP(this)'>Log</button>");
         /* raw panel accessible via button in backup section, no sidebar tab */
@@ -1593,25 +1592,16 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         H("</div><button type='button' class='addbtn' onclick='addRow(\"manual-list\",\"manual[]\",\"/mnt/usb0/PPSA12345.ffpkg\")'>+ %s</button>",L(LS_ADD_ENTRY));
         H("</div></div>");
 
-        /* Panel: Spiele */
+        /* Panel: Spiele & Images (kombiniert) */
         H("<div id='panel-spl' class='panel'><div class='section'>");
         H("<div class='sublist-title'>%s</div>",L(LS_GAMES));
         if(!has_api) H("<p class='hint'><span class='vbadge'>ab 1.7alpha3</span></p>");
         H("<div style='display:flex;gap:8px;margin-bottom:12px;'>"
-          "<button type='button' onclick='loadGames()' style='background:transparent;border:1px solid var(--border);"
+          "<button type='button' onclick='loadGamePanel()' style='background:transparent;border:1px solid var(--border);"
           "border-radius:6px;color:var(--dim);padding:5px 12px;cursor:pointer;font-family:var(--mono);font-size:.8rem;'>"
           ICO("ref") " Refresh</button></div>");
         H("<div id='games-list'><p class='hint'>%s</p></div>",L(LS_LOADING));
-        H("</div></div>");
-
-        /* Panel: Images */
-        H("<div id='panel-img' class='panel'><div class='section'>");
-        H("<div class='sublist-title'>%s</div>",L(LS_IMAGES));
-        if(!has_api) H("<p class='hint'><span class='vbadge'>ab 1.7alpha3</span></p>");
-        H("<div style='display:flex;gap:8px;margin-bottom:12px;'>"
-          "<button type='button' onclick='loadImages()' style='background:transparent;border:1px solid var(--border);"
-          "border-radius:6px;color:var(--dim);padding:5px 12px;cursor:pointer;font-family:var(--mono);font-size:.8rem;'>"
-          ICO("ref") " Refresh</button></div>");
+        H("<div class='sublist-title' style='margin-top:20px;'>%s</div>",L(LS_IMAGES));
         H("<div id='images-list'><p class='hint'>%s</p></div>",L(LS_LOADING));
         H("</div></div>");
 
@@ -1721,8 +1711,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "sessionStorage.setItem('panel',el.getAttribute('data-p'));"
           "if(el.getAttribute('data-p')==='log')refreshLog();"
           "if(el.getAttribute('data-p')==='raw'){rawLoad();}"
-          "if(el.getAttribute('data-p')==='spl')loadGames();"
-          "if(el.getAttribute('data-p')==='img')loadImages();"
+          "if(el.getAttribute('data-p')==='spl')loadGamePanel();"
           "var ct=document.querySelector('.content');if(ct)ct.scrollTop=0;}"          /* restore panel after USB-triggered reload */
           "var _rp=sessionStorage.getItem('panel');"
           "if(_rp){var _rb=document.querySelector('.nav-item[data-p=\"'+_rp+'\"]');if(_rb)showP(_rb);}"
@@ -1777,32 +1766,65 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "if(l){l.textContent=nm;l.title=path;l.style.display='inline';}if(b)b.style.display='inline';}"
           "setTimeout(refreshStatus,2000);})"
           ".catch(function(){if(btn)btn.disabled=false;});}""function showElfPicker(btn,paths,cb){var old=document.getElementById('sm-elf-picker');if(old)old.remove();var picker=document.createElement('div');picker.id='sm-elf-picker';picker.style.cssText='position:fixed;top:0;left:0;width:100%%;height:100%%;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:9999;';var box=document.createElement('div');box.style.cssText='background:#0d111a;border:1px solid #1e2a42;border-radius:14px;padding:36px;min-width:500px;max-width:800px;';var title=document.createElement('p');title.style.cssText='margin:0 0 20px;font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:#64748b;font-family:monospace;';title.textContent=_t.sel_sm;box.appendChild(title);paths.forEach(function(p){var b=document.createElement('button');b.style.cssText='display:block;width:100%%;margin-bottom:10px;padding:16px 18px;border-radius:8px;border:1px solid #1e2a42;background:#131927;color:#e2e8f0;cursor:pointer;text-align:left;font-family:monospace;font-size:.75rem;word-break:break-all;';b.textContent=p;b.onclick=function(){picker.remove();if(cb)cb(p);else launchElf(btn,p);};box.appendChild(b);});var cancel=document.createElement('button');cancel.style.cssText='display:block;width:100%%;padding:14px;border-radius:8px;border:1px solid #1e2a42;background:transparent;color:#64748b;cursor:pointer;font-family:monospace;font-size:.75rem;margin-top:6px;';cancel.textContent=_t.cancel;cancel.onclick=function(){picker.remove();};box.appendChild(cancel);picker.appendChild(box);document.body.appendChild(picker);}""document.querySelector('form').addEventListener('keydown',function(e){""if(e.key==='Enter'&&e.target.tagName!=='BUTTON')e.preventDefault();""});");
-        H("function loadGames(){"
-          "var el=document.getElementById('games-list');if(!el)return;"
-          "var old=el.innerHTML;"
-          "el.innerHTML='<p class=\"hint\">Lade...</p>';"
-          "fetch('/api/sm/games',{method:'POST'}).then(function(r){return r.json();})"
-          ".then(function(d){"
-          "if(d.error||d.status){el.innerHTML='<p class=\"hint\" style=\"color:#f87171;\">SM API: '+(d.error||'Fehler')+'</p>';return;}"
-          "if(!d.games||!d.games.length){el.innerHTML='<p class=\"hint\">Keine Spiele gefunden</p>';return;}"
-          "var h='<table style=\"width:100%%;border-collapse:collapse;font-size:.78rem;\">';"
-          "h+='<tr style=\"border-bottom:1px solid var(--border);color:var(--dim);font-size:.7rem;\">';"
-          "h+='<th style=\"text-align:left;padding:4px 8px;\">Titel</th>';"
-          "h+='<th style=\"text-align:left;padding:4px 8px;\">ID</th>';"
-          "h+='<th style=\"padding:4px 8px;\">Mount</th>';"
-          "h+='<th style=\"padding:4px 8px;\"></th></tr>';"
-          "d.games.forEach(function(g){"
-          "var mn=g.mounted?'<span style=\"color:#10b981;\">&#9679; aktiv</span>':'<span style=\"color:var(--dim);\">&#9675;</span>';"
+        H("function loadGamePanel(){"
+          "var gl=document.getElementById('games-list');"
+          "var il=document.getElementById('images-list');"
+          "if(gl)gl.innerHTML='<p class=\"hint\">Lade...</p>';"
+          "if(il)il.innerHTML='';"
+          "var gp=fetch('/api/sm/games',{method:'POST'}).then(function(r){return r.json();}).catch(function(){return null;});"
+          "var ip=fetch('/api/sm/images',{method:'POST'}).then(function(r){return r.json();}).catch(function(){return null;});"
+          "Promise.all([gp,ip]).then(function(res){"
+          "var gd=res[0],id=res[1];"
+          "if(!gl)return;"
+          "if(!gd||gd.error||gd.status){"
+          "gl.innerHTML='<p class=\"hint\" style=\"color:#f87171;\">SM API: '+(gd&&gd.error?gd.error:'nicht erreichbar')+'</p>';}"
+          "else if(!gd.games||!gd.games.length){"
+          "gl.innerHTML='<p class=\"hint\">Keine Spiele gefunden</p>';}"
+          "else{"
+          "var h='';"
+          "gd.games.forEach(function(g){"
+          "var tid=g.title_id||'';"
+          "var mn=g.mounted"
+          "?'<span style=\"color:#10b981;font-size:.75rem;\">&#9679; aktiv</span>'"
+          ":'<span style=\"color:var(--dim);font-size:.75rem;\">&#9675; inaktiv</span>';"
           "var ba=g.mounted"
-          "?'<button onclick=\"unmountGame(\\'' +g.title_id+'\\')\" style=\"background:transparent;border:1px solid #f87171;border-radius:4px;color:#f87171;padding:2px 8px;cursor:pointer;font-size:.7rem;\">Unmount</button>'"
-          ":'<button onclick=\"mountGame(\\'' +g.title_id+'\\')\" style=\"background:transparent;border:1px solid var(--accent);border-radius:4px;color:var(--accent);padding:2px 8px;cursor:pointer;font-size:.7rem;\">Mount</button>';"
-          "h+='<tr style=\"border-bottom:1px solid var(--border);\">';"
-          "h+='<td style=\"padding:6px 8px;\">'+(g.title_name||'?')+'</td>';"
-          "h+='<td style=\"padding:6px 8px;font-family:var(--mono);font-size:.72rem;\">'+g.title_id+'</td>';"
-          "h+='<td style=\"padding:6px 8px;text-align:center;\">'+mn+'</td>';"
-          "h+='<td style=\"padding:6px 8px;text-align:center;\">'+ba+'</td></tr>';"
-          "});h+='</table>';el.innerHTML=h;})"
-          ".catch(function(){el.innerHTML=old;});}"
+          "?'<button onclick=\"unmountGame(\\'' +tid+'\\')\" style=\"background:transparent;border:1px solid #f87171;border-radius:4px;color:#f87171;padding:3px 10px;cursor:pointer;font-size:.75rem;white-space:nowrap;\">Unmount</button>'"
+          ":'<button onclick=\"mountGame(\\'' +tid+'\\')\" style=\"background:transparent;border:1px solid var(--accent);border-radius:4px;color:var(--accent);padding:3px 10px;cursor:pointer;font-size:.75rem;white-space:nowrap;\">Mount</button>';"
+          "var ip2=g.image_path?'<div style=\"font-size:.65rem;color:var(--dim);margin-top:2px;font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;\">'+g.image_path+'</div>':'';"
+          "h+='<div style=\"display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--border);\">';"
+          "h+='<img src=\"/api/game/icon?title_id='+tid+'\" width=\"48\" height=\"48\"';"
+          "h+=' style=\"border-radius:8px;object-fit:cover;flex-shrink:0;background:#1e2a42;\"';"
+          "h+=' onerror=\"this.style.display=\\'none\\'\">';"
+          "h+='<div style=\"flex:1;min-width:0;\">';"
+          "h+='<div style=\"font-size:.83rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;\">'+(g.title_name||tid)+'</div>';"
+          "h+='<div style=\"font-family:var(--mono);font-size:.7rem;color:var(--dim);\">'+tid+'</div>';"
+          "h+=ip2+'</div>';"
+          "h+='<div style=\"display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;\">'+mn+ba+'</div></div>';"
+          "});gl.innerHTML=h;}"
+          "if(!il)return;"
+          "if(!id||id.error||id.status){"
+          "il.innerHTML='<p class=\"hint\" style=\"color:#f87171;font-size:.78rem;\">'+(id&&id.error?id.error:'nicht erreichbar')+'</p>';return;}"
+          "if(!id.images||!id.images.length){il.innerHTML='<p class=\"hint\">Keine Image-Dateien gefunden</p>';return;}"
+          "var ih='<table style=\"width:100%%;border-collapse:collapse;font-size:.78rem;\">';"
+          "ih+='<tr style=\"border-bottom:1px solid var(--border);color:var(--dim);font-size:.7rem;\">';"
+          "ih+='<th style=\"text-align:left;padding:4px 8px;\">Datei / Pfad</th>';"
+          "ih+='<th style=\"padding:4px 8px;\">Typ</th><th style=\"padding:4px 8px;\">Gr\\u00f6\\u00dfe</th>';"
+          "ih+='<th style=\"padding:4px 8px;\">Mount</th></tr>';"
+          "id.images.forEach(function(img){"
+          "var parts=(img.path||'').split('/');"
+          "var fn=parts.pop()||img.path;"
+          "var dir=parts.join('/')||'/';"
+          "var ext=fn.indexOf('.')>-1?fn.split('.').pop().toUpperCase():'';"
+          "var sz=img.size?(img.size>1073741824?(img.size/1073741824).toFixed(2)+' GB':(img.size/1048576).toFixed(0)+' MB'):'?';"
+          "var st=img.mounted?'<span style=\"color:#10b981;\">&#9679; aktiv</span>':'<span style=\"color:var(--dim);\">&#9675;</span>';"
+          "ih+='<tr style=\"border-bottom:1px solid var(--border);\">';"
+          "ih+='<td style=\"padding:6px 8px;\"><span style=\"font-family:var(--mono);font-size:.76rem;\">'+fn+'</span>';"
+          "ih+='<br><span style=\"font-family:var(--mono);font-size:.65rem;color:var(--dim);\">'+dir+'</span></td>';"
+          "ih+='<td style=\"padding:6px 8px;text-align:center;font-family:var(--mono);font-size:.7rem;\">'+ext+'</td>';"
+          "ih+='<td style=\"padding:6px 8px;text-align:center;\">'+sz+'</td>';"
+          "ih+='<td style=\"padding:6px 8px;text-align:center;\">'+st+'</td></tr>';"
+          "});ih+='</table>';il.innerHTML=ih;});}"
+          "function loadGames(){loadGamePanel();}"
           "function mountGame(tid){"
           "var el=document.getElementById('games-list');"
           "if(el)el.innerHTML='<p class=\"hint\">Mounting '+tid+'...</p>';"
@@ -1810,8 +1832,8 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           ".then(function(r){return r.json();})"
           ".then(function(d){"
           "if(d.error&&el)el.innerHTML='<p class=\"hint\" style=\"color:#f87171;\">'+d.error+'</p>';"
-          "setTimeout(loadGames,3000);})"
-          ".catch(function(){setTimeout(loadGames,3000);});}"
+          "setTimeout(loadGamePanel,3000);})"
+          ".catch(function(){setTimeout(loadGamePanel,3000);});}"
           "function unmountGame(tid){"
           "var el=document.getElementById('games-list');"
           "if(el)el.innerHTML='<p class=\"hint\">Unmounting '+tid+'...</p>';"
@@ -1819,37 +1841,8 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           ".then(function(r){return r.json();})"
           ".then(function(d){"
           "if(d.error&&el)el.innerHTML='<p class=\"hint\" style=\"color:#f87171;\">'+d.error+'</p>';"
-          "setTimeout(loadGames,3000);})"
-          ".catch(function(){setTimeout(loadGames,3000);});}"
-          "function loadImages(){"
-          "var el=document.getElementById('images-list');if(!el)return;"
-          "el.innerHTML='<p class=\"hint\">Lade...</p>';"
-          "fetch('/api/sm/images',{method:'POST'}).then(function(r){return r.json();})"
-          ".then(function(d){"
-          "if(d.error||d.status){el.innerHTML='<p class=\"hint\" style=\"color:#f87171;\">SM API: '+(d.error||'Fehler')+'</p>';return;}"
-          "if(!d.images||!d.images.length){el.innerHTML='<p class=\"hint\">Keine Images gefunden</p>';return;}"
-          "var h='<table style=\"width:100%%;border-collapse:collapse;font-size:.78rem;\">';"
-          "h+='<tr style=\"border-bottom:1px solid var(--border);color:var(--dim);font-size:.7rem;\">';"
-          "h+='<th style=\"text-align:left;padding:4px 8px;\">Datei / Pfad</th>';"
-          "h+='<th style=\"padding:4px 8px;\">Typ</th>';"
-          "h+='<th style=\"padding:4px 8px;\">Gr\\u00f6\\u00dfe</th>';"
-          "h+='<th style=\"padding:4px 8px;\">Mount</th></tr>';"
-          "d.images.forEach(function(img){"
-          "var parts=(img.path||'').split('/');"
-          "var fn=parts.pop()||img.path;"
-          "var dir=parts.join('/')||'/';"
-          "var ext=fn.indexOf('.')>-1?fn.split('.').pop().toUpperCase():'';"
-          "var sz=img.size?(img.size>1073741824?(img.size/1073741824).toFixed(2)+' GB':(img.size/1048576).toFixed(0)+' MB'):'?';"
-          "var st=img.mounted?'<span style=\"color:#10b981;\">&#9679; aktiv</span>':'<span style=\"color:var(--dim);\">&#9675;</span>';"
-          "h+='<tr style=\"border-bottom:1px solid var(--border);\">';"
-          "h+='<td style=\"padding:6px 8px;\">';"
-          "h+='<span style=\"font-family:var(--mono);font-size:.76rem;\">'+fn+'</span>';"
-          "h+='<br><span style=\"font-family:var(--mono);font-size:.65rem;color:var(--dim);\">'+dir+'</span></td>';"
-          "h+='<td style=\"padding:6px 8px;text-align:center;font-family:var(--mono);font-size:.7rem;\">'+ext+'</td>';"
-          "h+='<td style=\"padding:6px 8px;text-align:center;\">'+sz+'</td>';"
-          "h+='<td style=\"padding:6px 8px;text-align:center;\">'+st+'</td></tr>';"
-          "});h+='</table>';el.innerHTML=h;})"
-          ".catch(function(){el.innerHTML='<p class=\"hint\" style=\"color:#f87171;\">SM API nicht erreichbar</p>';});}");
+          "setTimeout(loadGamePanel,3000);})"
+          ".catch(function(){setTimeout(loadGamePanel,3000);});}");
         H("function addPath(){"
           "var c=document.getElementById('paths-list');"
           "var d=document.createElement('div');d.className='path-row';"
@@ -2862,6 +2855,22 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         }
         write_prefs(&p);
         mg_http_reply(c,200,"Content-Type: application/json\r\n","{\"ok\":true}");
+    }
+    else if(mg_match(hm->uri,mg_str("/api/game/icon"),NULL)){
+        char tid[64]={0}; mg_http_get_var(&hm->query,"title_id",tid,sizeof(tid));
+        /* sanitise: only allow alphanumeric title IDs */
+        for(int i=0;tid[i];i++) if(!isalnum((unsigned char)tid[i])){tid[0]=0;break;}
+        if(!tid[0]){mg_http_reply(c,400,"","");return;}
+        char p[128];
+        snprintf(p,sizeof(p),"/system_data/priv/appmeta/%s/icon0.png",tid);
+        FILE *f=fopen(p,"rb");
+        if(!f){mg_http_reply(c,404,"","");return;}
+        fseek(f,0,SEEK_END); long sz=ftell(f); fseek(f,0,SEEK_SET);
+        if(sz<=0||sz>524288){fclose(f);mg_http_reply(c,404,"","");return;}
+        char *buf=malloc(sz); if(!buf){fclose(f);mg_http_reply(c,500,"","");return;}
+        fread(buf,1,sz,f); fclose(f);
+        mg_http_reply(c,200,"Content-Type: image/png\r\nCache-Control: max-age=3600\r\n","%.*s",(int)sz,buf);
+        free(buf);
     }
     else if(mg_match(hm->uri,mg_str("/api/sm/games"),NULL)||
             mg_match(hm->uri,mg_str("/api/sm/images"),NULL)){

@@ -2925,22 +2925,34 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
     else if(mg_match(hm->uri,mg_str("/api/game/icon"),NULL)){
         char tid[64]={0}; mg_http_get_var(&hm->query,"title_id",tid,sizeof(tid));
         char mp[128]={0};  mg_http_get_var(&hm->query,"mp",mp,sizeof(mp));
-        /* sanitise mp: only alnum, dot, underscore */
+        /* sanitise mp: only alnum, underscore, hyphen */
         for(int i=0;mp[i];i++) if(!isalnum((unsigned char)mp[i])&&mp[i]!='_'&&mp[i]!='-'){mp[0]=0;break;}
         /* sanitise tid: only alphanumeric */
         for(int i=0;tid[i];i++) if(!isalnum((unsigned char)tid[i])){tid[0]=0;break;}
-        if(!tid[0]&&!mp[0]){mg_http_reply(c,404,"","");return;}
+        /* extract tid from mp basename when tid not supplied: PPSA20515_name_hash -> PPSA20515 */
+        if(!tid[0]&&mp[0]){
+            char tmp[64]={0}; strncpy(tmp,mp,sizeof(tmp)-1);
+            char *us=strchr(tmp,'_'); if(us) *us=0;
+            if(strlen(tmp)==9){
+                int ok=1;
+                for(int i=0;i<4;i++) if(!isalpha((unsigned char)tmp[i])){ok=0;break;}
+                for(int i=4;i<9;i++) if(!isdigit((unsigned char)tmp[i])){ok=0;break;}
+                if(ok) strncpy(tid,tmp,sizeof(tid)-1);
+            }
+        }
+        if(!tid[0]){mg_http_reply(c,404,"","");return;}
         #define SMG_ICON_CACHE "/data/SMPlusGui/icon-cache"
-        /* cache key: prefer mp over tid since mp is more specific */
-        char ckey[128]; snprintf(ckey,sizeof(ckey),"%s",mp[0]?mp:tid);
-        char cache[256]; snprintf(cache,sizeof(cache),SMG_ICON_CACHE "/%s.png",ckey);
+        /* always cache under tid so unmounted lookups hit the same entry */
+        char cache[256]; snprintf(cache,sizeof(cache),SMG_ICON_CACHE "/%s.png",tid);
         /* serve from our own cache if available */
         FILE *f=fopen(cache,"rb");
         /* if not cached, try live mount paths and populate cache */
         if(!f){
             char src[256]; FILE *sf=NULL;
-            /* try mount_point path first (most direct) */
-            if(mp[0]&&!sf){
+            /* /data/homebrew/{tid}/ is SM's symlink - most reliable path */
+            if(!sf){ snprintf(src,sizeof(src),"/data/homebrew/%s/sce_sys/icon0.png",tid); sf=fopen(src,"rb"); }
+            /* also try mount_point directly */
+            if(!sf&&mp[0]){
                 snprintf(src,sizeof(src),"/mnt/shadowmnt/%s/sce_sys/icon0.png",mp);
                 sf=fopen(src,"rb");
             }

@@ -257,30 +257,21 @@ static void b64enc(const unsigned char *in, size_t len, char *out) {
     out[j]=0;
 }
 
-/* read icon file and return malloc'd base64 string, or NULL */
+/* read icon file and return malloc'd base64 string, or NULL; skip if > 30KB */
 static char *icon_b64(const char *tid) {
-    static const char *ptpl[]={
-        "/data/SMPlusGui/icon-cache/%s.png",
-        "/user/appmeta/%s/icon0.png",
-        "/data/homebrew/%s/sce_sys/icon0.png",
-        NULL
-    };
+    /* check our cache first, then /user/appmeta/ (SM installs all tiles there) */
     char src[256]; FILE *f=NULL;
-    for(int i=0;ptpl[i]&&!f;i++){snprintf(src,sizeof(src),ptpl[i],tid);f=fopen(src,"rb");}
-    /* scan /mnt/shadowmnt/ */
-    if(!f){DIR *sd=opendir("/mnt/shadowmnt");if(sd){struct dirent *de;size_t tl=strlen(tid);
-        while(!f&&(de=readdir(sd))!=NULL)if(strncmp(de->d_name,tid,tl)==0&&de->d_name[tl]=='_')
-            {snprintf(src,sizeof(src),"/mnt/shadowmnt/%s/sce_sys/icon0.png",de->d_name);f=fopen(src,"rb");}
-        closedir(sd);}
-    }
+    snprintf(src,sizeof(src),"/data/SMPlusGui/icon-cache/%s.png",tid); f=fopen(src,"rb");
+    if(!f){snprintf(src,sizeof(src),"/user/appmeta/%s/icon0.png",tid); f=fopen(src,"rb");}
+    if(!f){snprintf(src,sizeof(src),"/data/homebrew/%s/sce_sys/icon0.png",tid); f=fopen(src,"rb");}
     if(!f) return NULL;
     fseek(f,0,SEEK_END);long sz=ftell(f);fseek(f,0,SEEK_SET);
-    if(sz<=0||sz>524288){fclose(f);return NULL;}
+    if(sz<=0||sz>30720){fclose(f);return NULL;}  /* skip icons > 30KB */
     unsigned char *buf=malloc(sz);
     if(!buf){fclose(f);return NULL;}
     if((long)fread(buf,1,sz,f)!=sz){free(buf);fclose(f);return NULL;}
     fclose(f);
-    /* also write to cache if we found it elsewhere */
+    /* write to cache if found elsewhere */
     {char cp[256];snprintf(cp,sizeof(cp),"/data/SMPlusGui/icon-cache/%s.png",tid);
      struct stat cs; if(stat(cp,&cs)!=0){mkdir("/data/SMPlusGui",0777);mkdir("/data/SMPlusGui/icon-cache",0777);
          FILE *cf=fopen(cp,"wb");if(cf){fwrite(buf,1,sz,cf);fclose(cf);}}}

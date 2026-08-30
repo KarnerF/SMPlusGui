@@ -2987,46 +2987,55 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         if(!tid[0]){mg_http_reply(c,404,"","");return;}
         #define SMG_IC2 "/data/SMPlusGui/icon-cache"
         char cache2[256]; snprintf(cache2,sizeof(cache2),SMG_IC2"/%s.png",tid);
-        FILE *fi=fopen(cache2,"rb");
-        if(!fi){
-            /* try /user/appmeta first (confirmed accessible), then other paths */
+        /* find source icon and copy to cache if not already cached */
+        struct stat cst;
+        if(stat(cache2,&cst)!=0){
             static const char *ptpl[]={
                 "/user/appmeta/%s/icon0.png",
                 "/data/homebrew/%s/sce_sys/icon0.png",
                 "/mnt/ext0/homebrew/%s/sce_sys/icon0.png",
                 NULL
             };
-            char src[256]; FILE *sf=NULL;
-            for(int i=0;ptpl[i]&&!sf;i++){snprintf(src,sizeof(src),ptpl[i],tid);sf=fopen(src,"rb");}
+            char src[256]={0}; struct stat sst;
+            for(int i=0;ptpl[i]&&!src[0];i++){
+                snprintf(src,sizeof(src),ptpl[i],tid);
+                if(stat(src,&sst)!=0) src[0]=0;
+            }
             /* scan /mnt/shadowmnt/ for {tid}_* */
-            if(!sf){DIR *sd=opendir("/mnt/shadowmnt");if(sd){struct dirent *de;size_t tl=strlen(tid);
-                while(!sf&&(de=readdir(sd))!=NULL)if(strncmp(de->d_name,tid,tl)==0&&de->d_name[tl]=='_')
-                    {snprintf(src,sizeof(src),"/mnt/shadowmnt/%s/sce_sys/icon0.png",de->d_name);sf=fopen(src,"rb");}
+            if(!src[0]){DIR *sd=opendir("/mnt/shadowmnt");if(sd){struct dirent *de;size_t tl=strlen(tid);
+                while(!src[0]&&(de=readdir(sd))!=NULL)
+                    if(strncmp(de->d_name,tid,tl)==0&&de->d_name[tl]=='_'){
+                        snprintf(src,sizeof(src),"/mnt/shadowmnt/%s/sce_sys/icon0.png",de->d_name);
+                        if(stat(src,&sst)!=0) src[0]=0;}
                 closedir(sd);}
             }
-            if(sf){
-                fseek(sf,0,SEEK_END);long isz=ftell(sf);fseek(sf,0,SEEK_SET);
-                if(isz>0&&isz<=524288){
-                    char *ibuf=malloc(isz);
-                    if(ibuf&&(fread(ibuf,1,isz,sf)==(size_t)isz)){
-                        mkdir("/data/SMPlusGui",0777);mkdir(SMG_IC2,0777);
-                        FILE *cf=fopen(cache2,"wb");if(cf){fwrite(ibuf,1,isz,cf);fclose(cf);}
-                        mg_printf(c,"HTTP/1.1 200 OK\r\nContent-Type: image/png\r\nContent-Length: %ld\r\nCache-Control: max-age=86400\r\n\r\n",(long)isz);
-                        mg_send(c,ibuf,(size_t)isz);
-                        free(ibuf);fclose(sf);return;
-                    }free(ibuf);
-                }fclose(sf);
+            if(src[0]){
+                /* copy source to cache using cp via raw read/write */
+                FILE *sf=fopen(src,"rb");
+                if(sf){
+                    fseek(sf,0,SEEK_END);long isz=ftell(sf);fseek(sf,0,SEEK_SET);
+                    if(isz>0&&isz<=524288){
+                        char *ib=malloc(isz);
+                        if(ib&&(fread(ib,1,isz,sf)==(size_t)isz)){
+                            mkdir("/data/SMPlusGui",0777);mkdir(SMG_IC2,0777);
+                            FILE *cf=fopen(cache2,"wb");
+                            if(cf){fwrite(ib,1,isz,cf);fclose(cf);}
+                        }
+                        free(ib);
+                    }
+                    fclose(sf);
+                }
             }
-            mg_http_reply(c,404,"Cache-Control: no-store\r\n","");return;
-            #undef SMG_IC2
         }
-        fseek(fi,0,SEEK_END);long sz2=ftell(fi);fseek(fi,0,SEEK_SET);
-        if(sz2<=0||sz2>524288){fclose(fi);mg_http_reply(c,404,"Cache-Control: no-store\r\n","");return;}
-        char *buf2=malloc(sz2);if(!buf2){fclose(fi);mg_http_reply(c,500,"","");return;}
-        fread(buf2,1,sz2,fi);fclose(fi);
-        mg_printf(c,"HTTP/1.1 200 OK\r\nContent-Type: image/png\r\nContent-Length: %ld\r\nCache-Control: max-age=86400\r\n\r\n",(long)sz2);
-        mg_send(c,buf2,(size_t)sz2);
-        free(buf2);
+        /* serve from cache using mg_http_serve_file (handles binary correctly) */
+        if(stat(cache2,&cst)==0){
+            struct mg_http_serve_opts opts={0};
+            opts.mime_types="png=image/png";
+            opts.extra_headers="Cache-Control: max-age=86400\r\n";
+            mg_http_serve_file(c,hm,cache2,&opts);
+        } else {
+            mg_http_reply(c,404,"Cache-Control: no-store\r\n","");
+        }
         #undef SMG_IC2
     }
     else if(mg_match(hm->uri,mg_str("/api/game/icon-check"),NULL)){

@@ -1813,7 +1813,10 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "function _smMount(i){var g=window._smG&&window._smG[i];if(!g)return;"
           "var gl=document.getElementById('games-list');"
           "if(gl)gl.innerHTML='<p class=\"hint\">Mounting...</p>';"
-          "if(g.tid)mountGame(g.tid);else manualMount(g.path);}"
+          /* write to manual.lst for persistence + call SM API for immediate mount */
+          "fetch('/api/manual/add?path='+encodeURIComponent(g.path),{method:'POST'});"
+          "if(g.tid){fetch('/api/sm/games/mount?title_id='+encodeURIComponent(g.tid),{method:'POST'});}"
+          "setTimeout(function(){loadGamePanel(0);},4000);}"
           "function _smUnmount(i){var g=window._smG&&window._smG[i];if(!g)return;"
           "var gl=document.getElementById('games-list');"
           "if(gl)gl.innerHTML='<p class=\"hint\">Unmounting...</p>';"

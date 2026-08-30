@@ -1,6 +1,6 @@
 # SMPlusGui
 
-A fun side project � web-based config UI for [ShadowMountPlus](https://github.com/drakmor/ShadowMountPlus) running as a PS5 payload. Built with AI assistance.
+Web-based config UI for [ShadowMountPlus](https://github.com/drakmor/ShadowMountPlus) running as a PS5 payload.
 Configure all SM settings from any browser, manage config backups, view the debug log, and autostart SM on launch.
 Opens at **http://\<PS5-IP\>:7070**
 
@@ -25,7 +25,7 @@ make
 
 ## Usage
 
-1. Load `SMPlusGui_1.0.0.elf`
+1. Load `SMPlusGui_v1.0.0.elf`
 2. Open `http://<PS5-IP>:7070`
 3. Change settings, hit **Save**
 

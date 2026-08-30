@@ -8,7 +8,7 @@ Opens at **http://\<PS5-IP\>:7070**
 
 ## Requirements
 
-- Jailbroken PS5 with [ShadowMountPlus](https://github.com/drakmor/ShadowMountPlus) **1.7alpha3 or newer** (1.7alpha12 recommended)
+- Jailbroken PS5 with [ShadowMountPlus](https://github.com/drakmor/ShadowMountPlus) **1.6beta16 or newer** (1.7alpha12 recommended)
 - Payload loader (e.g. [Payload Manager](https://github.com/itsPLK/ps5-payload-manager))
 - elfldr on port 9021/9020 (for Start/Autostart)
 

@@ -2858,12 +2858,24 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
     }
     else if(mg_match(hm->uri,mg_str("/api/game/icon"),NULL)){
         char tid[64]={0}; mg_http_get_var(&hm->query,"title_id",tid,sizeof(tid));
-        /* sanitise: only allow alphanumeric title IDs */
+        /* sanitise: only alphanumeric title IDs allowed */
         for(int i=0;tid[i];i++) if(!isalnum((unsigned char)tid[i])){tid[0]=0;break;}
-        if(!tid[0]){mg_http_reply(c,400,"","");return;}
-        char p[128];
-        snprintf(p,sizeof(p),"/system_data/priv/appmeta/%s/icon0.png",tid);
-        FILE *f=fopen(p,"rb");
+        if(!tid[0]){mg_http_reply(c,404,"","");return;}
+        /* try paths in order: homebrew folder, etaHEN, USB, system appmeta */
+        static const char *icon_tpl[]={
+            "/data/homebrew/%s/sce_sys/icon0.png",
+            "/data/etaHEN/games/%s/sce_sys/icon0.png",
+            "/mnt/ext0/homebrew/%s/sce_sys/icon0.png",
+            "/mnt/usb0/%s/sce_sys/icon0.png",
+            "/mnt/usb1/%s/sce_sys/icon0.png",
+            "/system_data/priv/appmeta/%s/icon0.png",
+            NULL
+        };
+        char p[256]; FILE *f=NULL;
+        for(int i=0;icon_tpl[i]&&!f;i++){
+            snprintf(p,sizeof(p),icon_tpl[i],tid);
+            f=fopen(p,"rb");
+        }
         if(!f){mg_http_reply(c,404,"","");return;}
         fseek(f,0,SEEK_END); long sz=ftell(f); fseek(f,0,SEEK_SET);
         if(sz<=0||sz>524288){fclose(f);mg_http_reply(c,404,"","");return;}

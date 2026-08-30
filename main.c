@@ -1795,8 +1795,8 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "var mn=img.mounted?'<span style=\"color:#10b981;font-size:.75rem;\">&#9679; aktiv</span>'"
           ":'<span style=\"color:var(--dim);font-size:.75rem;\">&#9675; inaktiv</span>';"
           "var ba=img.mounted"
-          "?'<button onclick=\"_smUnmount('+i+')\" style=\"background:transparent;border:1px solid #f87171;border-radius:4px;color:#f87171;padding:3px 10px;cursor:pointer;font-size:.75rem;\">Unmount</button>'"
-          ":'<button onclick=\"_smMount('+i+')\" style=\"background:transparent;border:1px solid var(--accent);border-radius:4px;color:var(--accent);padding:3px 10px;cursor:pointer;font-size:.75rem;white-space:nowrap;\">Mount</button>';"
+          "?'<button type=\'button\' onclick=\"_smUnmount('+i+')\" style=\"background:transparent;border:1px solid #f87171;border-radius:4px;color:#f87171;padding:3px 10px;cursor:pointer;font-size:.75rem;\">Unmount</button>'"
+          ":'<button type=\'button\' onclick=\"_smMount('+i+')\" style=\"background:transparent;border:1px solid var(--accent);border-radius:4px;color:var(--accent);padding:3px 10px;cursor:pointer;font-size:.75rem;white-space:nowrap;\">Mount</button>';"
           /* /api/icon/{tid} has no query string - safe in img src */
           "var ic=tid"
           "?'<div style=\"position:relative;width:48px;height:48px;border-radius:8px;overflow:hidden;background:#1e2a42;flex-shrink:0;\">'"
@@ -2933,8 +2933,8 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
     }
     else if(mg_match(hm->uri,mg_str("/api/icon/*"),NULL)){
         /* clean path-based icon endpoint: /api/icon/PPSA20515 */
-        const char *p=hm->uri.buf+9; /* skip "/api/icon/" */
-        size_t plen=hm->uri.len-9;
+        const char *p=hm->uri.buf+10; /* skip "/api/icon/" (10 chars) */
+        size_t plen=hm->uri.len-10;
         char tid[64]={0};
         if(plen>0&&plen<sizeof(tid)){
             memcpy(tid,p,plen); tid[plen]=0;

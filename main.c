@@ -1837,6 +1837,14 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "var ip=fetch('/api/sm/images',{method:'POST'}).then(function(r){return r.text();}).catch(function(e){return 'ERROR: '+e;});"
           "Promise.all([gp,ip]).then(function(res){"
           "pre.textContent='=== /api/v1/games ===\\n'+res[0]+'\\n\\n=== /api/v1/images ===\\n'+res[1];"
+          "var imgs=[];try{imgs=JSON.parse(res[1]).images||[];}catch(e){}"
+          "if(imgs.length&&imgs[0].mount_point){"
+          "var mp=imgs[0].mount_point.split('/').pop();"
+          "var t=mp.split('_')[0];"
+          "fetch('/api/game/icon-check?title_id='+t).then(function(r){return r.json();})"
+          ".then(function(d){"
+          "pre.textContent+=('\\n\\n=== ICON PATHS ('+t+') ===\\n'+JSON.stringify(d.paths,null,2));"
+          "}).catch(function(){});}"
           "});}"
           "function manualMount(path){"
           "var gl=document.getElementById('games-list');"
@@ -2921,6 +2929,31 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         tv[1]=tv[0]; utimes(SM_MANUAL,tv);
         mg_http_reply(c,200,"Content-Type: application/json\r\n","{\"ok\":true}");
         #undef SM_MANUAL
+    }
+    else if(mg_match(hm->uri,mg_str("/api/game/icon-check"),NULL)){
+        char tid[64]={0}; mg_http_get_var(&hm->query,"title_id",tid,sizeof(tid));
+        for(int i=0;tid[i];i++) if(!isalnum((unsigned char)tid[i])){tid[0]=0;break;}
+        if(!tid[0]){mg_http_reply(c,400,"Content-Type: application/json\r\n","{\"error\":\"bad tid\"}");return;}
+        char out[4096]={0}; int pos=0;
+        pos+=snprintf(out+pos,sizeof(out)-pos,"{\"tid\":\"%s\",\"paths\":[",tid);
+        static const char *chk[]={
+            "/data/homebrew/%s/sce_sys/icon0.png",
+            "/data/homebrew/%s",
+            "/user/appmeta/%s/icon0.png",
+            "/system_data/priv/appmeta/%s/icon0.png",
+            "/data/SMPlusGui/icon-cache/%s.png",
+            NULL
+        };
+        int first=1;
+        for(int i=0;chk[i];i++){
+            char p[256]; snprintf(p,sizeof(p),chk[i],tid);
+            struct stat st; int ok=(stat(p,&st)==0);
+            pos+=snprintf(out+pos,sizeof(out)-pos,"%s{\"path\":\"%s\",\"ok\":%s}",
+                first?"":",",p,ok?"true":"false");
+            first=0;
+        }
+        pos+=snprintf(out+pos,sizeof(out)-pos,"]}");
+        mg_http_reply(c,200,"Content-Type: application/json\r\n","%s",out);
     }
     else if(mg_match(hm->uri,mg_str("/api/game/icon"),NULL)){
         char tid[64]={0}; mg_http_get_var(&hm->query,"title_id",tid,sizeof(tid));

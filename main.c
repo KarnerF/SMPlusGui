@@ -1596,10 +1596,16 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         H("<div id='panel-spl' class='panel'><div class='section'>");
         H("<div class='sublist-title'>%s</div>",L(LS_GAMES));
         if(!has_api) H("<p class='hint'><span class='vbadge'>ab 1.7alpha3</span></p>");
-        H("<div style='display:flex;gap:8px;margin-bottom:12px;'>"
-          "<button type='button' onclick='loadGamePanel()' style='background:transparent;border:1px solid var(--border);"
+        H("<div style='display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;'>"
+          "<button type='button' onclick='loadGamePanel(0)' style='background:transparent;border:1px solid var(--border);"
           "border-radius:6px;color:var(--dim);padding:5px 12px;cursor:pointer;font-family:var(--mono);font-size:.8rem;'>"
-          ICO("ref") " Refresh</button></div>");
+          ICO("ref") " Refresh</button>"
+          "<button type='button' onclick='smRawDebug()' style='background:transparent;border:1px solid var(--border);"
+          "border-radius:6px;color:var(--dim);padding:5px 12px;cursor:pointer;font-family:var(--mono);font-size:.8rem;'>"
+          "Rohdaten</button></div>");
+        H("<div id='sm-raw-dbg' style='display:none;margin-bottom:10px;'>"
+          "<pre id='sm-raw-pre' style='background:#0a0f1a;border:1px solid var(--border);border-radius:6px;"
+          "padding:10px;font-size:.65rem;color:var(--dim);overflow:auto;max-height:200px;white-space:pre-wrap;'></pre></div>");
         H("<div id='games-list'><p class='hint'>%s</p></div>",L(LS_LOADING));
         H("<div class='sublist-title' style='margin-top:20px;'>%s</div>",L(LS_IMAGES));
         H("<div id='images-list'><p class='hint'>%s</p></div>",L(LS_LOADING));
@@ -1838,6 +1844,18 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "ih+='<td style=\"padding:6px 8px;text-align:center;\">'+iba+'</td></tr>';"
           "});ih+='</table>';il.innerHTML=ih;});}"
           "function loadGames(){loadGamePanel(0);}"
+          "function smRawDebug(){"
+          "var dbg=document.getElementById('sm-raw-dbg');"
+          "var pre=document.getElementById('sm-raw-pre');"
+          "if(!dbg||!pre)return;"
+          "dbg.style.display=dbg.style.display==='none'?'block':'none';"
+          "if(dbg.style.display==='none')return;"
+          "pre.textContent='Lade...';"
+          "var gp=fetch('/api/sm/games',{method:'POST'}).then(function(r){return r.text();}).catch(function(e){return 'ERROR: '+e;});"
+          "var ip=fetch('/api/sm/images',{method:'POST'}).then(function(r){return r.text();}).catch(function(e){return 'ERROR: '+e;});"
+          "Promise.all([gp,ip]).then(function(res){"
+          "pre.textContent='=== /api/v1/games ===\\n'+res[0]+'\\n\\n=== /api/v1/images ===\\n'+res[1];"
+          "});}"
           "function manualMount(path){"
           "var il=document.getElementById('images-list');"
           "if(il)il.innerHTML='<p class=\"hint\">Mounting...</p>';"

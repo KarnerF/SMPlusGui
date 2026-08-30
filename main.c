@@ -2899,85 +2899,76 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         #undef SM_MANUAL
     }
     else if(mg_match(hm->uri,mg_str("/api/sm/gamelist"),NULL)){
-        /* server-side game list HTML — no JS string building needed */
-        char *imgs_json=sm_api_req("POST","/api/v1/images","{}");
-        char *out=malloc(131072); if(!out){mg_http_reply(c,500,"","");if(imgs_json)free(imgs_json);return;}
+        /* server-side game list HTML using /api/v1/games (has title_name) */
+        char *games_json=sm_api_req("POST","/api/v1/games","{}");
+        char *out=malloc(131072); if(!out){mg_http_reply(c,500,"","");if(games_json)free(games_json);return;}
         int pos=0;
         #define GL(fmt,...) pos+=snprintf(out+pos,131071-pos,fmt,##__VA_ARGS__)
-        if(!imgs_json){
+        if(!games_json){
             GL("<p class=\"hint\" style=\"color:#f87171;\">SM API nicht erreichbar</p>");
         } else {
-            /* minimal JSON parse: extract each image object */
-            const char *p=strstr(imgs_json,"\"images\"");
-            if(!p){GL("<p class=\"hint\">Keine Spiele gefunden</p>");}
+            const char *gstart=strstr(games_json,"\"games\"");
+            if(!gstart||!strstr(gstart,"\"title_id\"")){GL("<p class=\"hint\">Keine Spiele gefunden</p>");}
             else {
                 int n=0;
-                const char *cur=p;
+                const char *cur=gstart;
                 while((cur=strstr(cur,"{\"path\""))!=NULL&&pos<120000){
-                    char path[512]={0},mp[256]={0};
-                    long long sz=0; int mounted=0;
-                    /* extract path */
-                    const char *pv=strstr(cur,"\"path\":\"");
-                    if(pv){pv+=8;const char *pe=strchr(pv,'"');if(pe&&pe-pv<(int)sizeof(path)){memcpy(path,pv,pe-pv);}}
-                    /* extract mount_point */
-                    const char *mpv=strstr(cur,"\"mount_point\":\"");
-                    if(mpv){mpv+=15;const char *mpe=strchr(mpv,'"');if(mpe&&mpe-mpv<(int)sizeof(mp)){memcpy(mp,mpv,mpe-mpv);}}
-                    /* extract size */
-                    const char *sv=strstr(cur,"\"size\":");
-                    if(sv){sv+=7;sz=strtoll(sv,NULL,10);}
+                    char tid[16]={0},name[128]={0},imgpath[512]={0};
+                    int mounted=0;
+                    /* extract title_id */
+                    const char *tv=strstr(cur,"\"title_id\":\"");
+                    if(tv){tv+=12;const char *te=strchr(tv,'"');if(te&&te-tv<(int)sizeof(tid)){memcpy(tid,tv,te-tv);}}
+                    /* extract title_name */
+                    const char *nv=strstr(cur,"\"title_name\":\"");
+                    if(nv){nv+=14;const char *ne=strchr(nv,'"');if(ne&&ne-nv<(int)sizeof(name)){memcpy(name,nv,ne-nv);}}
+                    /* extract image_path for size */
+                    const char *iv=strstr(cur,"\"image_path\":\"");
+                    if(iv){iv+=14;const char *ie=strchr(iv,'"');if(ie&&ie-iv<(int)sizeof(imgpath)){memcpy(imgpath,iv,ie-iv);}}
                     /* extract mounted */
                     const char *mv=strstr(cur,"\"mounted\":");
                     if(mv){mv+=10;mounted=(mv[0]=='t');}
-                    /* extract title_id from mount_point basename */
-                    char tid[16]={0};
-                    const char *bn=strrchr(mp,'/'); bn=bn?bn+1:mp;
-                    char tmp[64]={0}; strncpy(tmp,bn,sizeof(tmp)-1);
-                    char *us=strchr(tmp,'_'); if(us)*us=0;
-                    if(strlen(tmp)==9){
-                        int ok=1;
-                        for(int i=0;i<4;i++) if(!isalpha((unsigned char)tmp[i])){ok=0;break;}
-                        for(int i=4;i<9;i++) if(!isdigit((unsigned char)tmp[i])){ok=0;break;}
-                        if(ok) strncpy(tid,tmp,sizeof(tid)-1);
+                    /* get file size from image_path */
+                    char szbuf[32]="?";
+                    if(imgpath[0]){
+                        /* unescape JSON \/ */
+                        char rp[512]={0};int ri=0;
+                        for(int i=0;imgpath[i]&&ri<(int)sizeof(rp)-1;i++){
+                            if(imgpath[i]=='\\'&&imgpath[i+1]=='/'){rp[ri++]='/';i++;}
+                            else rp[ri++]=imgpath[i];}
+                        struct stat ist; if(stat(rp,&ist)==0){
+                            if(ist.st_size>1073741824) snprintf(szbuf,sizeof(szbuf),"%.2f GB",(double)ist.st_size/1073741824.0);
+                            else snprintf(szbuf,sizeof(szbuf),"%lld MB",(long long)ist.st_size/1048576);}
                     }
-                    /* format size */
-                    char szbuf[32]={0};
-                    if(sz>1073741824) snprintf(szbuf,sizeof(szbuf),"%.2f GB",(double)sz/1073741824.0);
-                    else snprintf(szbuf,sizeof(szbuf),"%lld MB",sz/1048576);
-                    /* extract filename from path, unescape JSON \/ sequences */
-                    char fn[256]={0};
-                    {char pp[512]={0};int pi=0;
-                     for(int i=0;path[i]&&pi<(int)sizeof(pp)-1;i++){
-                         if(path[i]=='\\'&&path[i+1]=='/'){pp[pi++]='/';i++;}
-                         else pp[pi++]=path[i];
-                     }
-                     const char *sl=strrchr(pp,'/');
-                     strncpy(fn,sl?sl+1:pp,sizeof(fn)-1);}
-                    /* build card */
+                    /* unescape name */
+                    char dname[128]={0};{int di=0;
+                        for(int i=0;name[i]&&di<(int)sizeof(dname)-1;i++){
+                            if(name[i]=='\\'&&name[i+1]=='/'){ dname[di++]='/';i++;}
+                            else dname[di++]=name[i];}
+                    }
+                    if(!dname[0]) strncpy(dname,tid,sizeof(dname)-1);
                     const char *mntcol=mounted?"color:#10b981":"color:var(--dim)";
                     const char *mnttxt=mounted?"&#9679; aktiv":"&#9675; inaktiv";
-                    const char *btnstyle=mounted
-                        ?"background:transparent;border:1px solid #f87171;border-radius:4px;color:#f87171;padding:3px 10px;cursor:pointer;font-size:.75rem;"
-                        :"background:transparent;border:1px solid var(--accent);border-radius:4px;color:var(--accent);padding:3px 10px;cursor:pointer;font-size:.75rem;white-space:nowrap;";
-                    const char *btnfn=mounted?"_smUnmount":"_smMount";
+                    const char *bs_um="background:transparent;border:1px solid #f87171;border-radius:4px;color:#f87171;padding:3px 10px;cursor:pointer;font-size:.75rem;";
+                    const char *bs_mt="background:transparent;border:1px solid var(--accent);border-radius:4px;color:var(--accent);padding:3px 10px;cursor:pointer;font-size:.75rem;white-space:nowrap;";
                     GL("<div style=\"display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--border);\">");
-                    if(tid[0]) GL("<div style=\"position:relative;width:48px;height:48px;border-radius:8px;overflow:hidden;background:#1e2a42;flex-shrink:0;\">"
-                        "<img src=\"/api/icon/%s\" style=\"position:absolute;top:0;left:0;width:100%%;height:100%%;object-fit:cover;\" onerror=\"this.remove()\">"
-                        "<span style=\"position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.55rem;color:#64748b;font-family:monospace;\">%.4s</span></div>",tid,tid);
-                    else GL("<div style=\"width:48px;height:48px;border-radius:8px;background:#1e2a42;flex-shrink:0;\"></div>");
+                    GL("<div style=\"position:relative;width:48px;height:48px;border-radius:8px;overflow:hidden;background:#1e2a42;flex-shrink:0;\">"
+                       "<img src=\"/api/icon/%s\" style=\"position:absolute;top:0;left:0;width:100%%;height:100%%;object-fit:cover;\" onerror=\"this.remove()\">"
+                       "<span style=\"position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.55rem;color:#64748b;font-family:monospace;\">%.4s</span></div>",tid,tid);
                     GL("<div style=\"flex:1;min-width:0;\">"
-                        "<div style=\"font-size:.83rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;\">%s</div>"
-                        "<div style=\"font-family:var(--mono);font-size:.7rem;color:var(--dim);\">%s &mdash; %s</div></div>",
-                        fn, tid[0]?tid:"–", szbuf);
+                       "<div style=\"font-size:.83rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;\">%s</div>"
+                       "<div style=\"font-family:var(--mono);font-size:.7rem;color:var(--dim);\">%s &mdash; %s</div></div>",
+                       dname, tid, szbuf);
                     GL("<div style=\"display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;\">"
-                        "<span style=\"font-size:.75rem;%s;\">%s</span>"
-                        "<button type=\"button\" data-tid=\"%s\" data-path=\"%s\" onclick=\"%s(this.dataset.tid,this.dataset.path)\" style=\"%s\">%s</button>"
-                        "</div></div>",
-                        mntcol,mnttxt, tid,path, btnfn, btnstyle, mounted?"Unmount":"Mount");
+                       "<span style=\"font-size:.75rem;%s;\">%s</span>"
+                       "<button type=\"button\" data-tid=\"%s\" data-path=\"%s\" onclick=\"%s(this.dataset.tid,this.dataset.path)\" style=\"%s\">%s</button>"
+                       "</div></div>",
+                       mntcol,mnttxt, tid,imgpath, mounted?"_smUnmount":"_smMount",
+                       mounted?bs_um:bs_mt, mounted?"Unmount":"Mount");
                     n++; cur++;
                 }
                 if(n==0) GL("<p class=\"hint\">Keine Spiele gefunden</p>");
             }
-            free(imgs_json);
+            free(games_json);
         }
         out[pos]=0;
         #undef GL
@@ -3020,7 +3011,8 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
                     if(ibuf&&(fread(ibuf,1,isz,sf)==(size_t)isz)){
                         mkdir("/data/SMPlusGui",0777);mkdir(SMG_IC2,0777);
                         FILE *cf=fopen(cache2,"wb");if(cf){fwrite(ibuf,1,isz,cf);fclose(cf);}
-                        mg_http_reply(c,200,"Content-Type: image/png\r\nCache-Control: max-age=86400\r\n","%.*s",(int)isz,ibuf);
+                        mg_printf(c,"HTTP/1.1 200 OK\r\nContent-Type: image/png\r\nContent-Length: %ld\r\nCache-Control: max-age=86400\r\n\r\n",(long)isz);
+                        mg_send(c,ibuf,(size_t)isz);
                         free(ibuf);fclose(sf);return;
                     }free(ibuf);
                 }fclose(sf);
@@ -3032,7 +3024,8 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         if(sz2<=0||sz2>524288){fclose(fi);mg_http_reply(c,404,"Cache-Control: no-store\r\n","");return;}
         char *buf2=malloc(sz2);if(!buf2){fclose(fi);mg_http_reply(c,500,"","");return;}
         fread(buf2,1,sz2,fi);fclose(fi);
-        mg_http_reply(c,200,"Content-Type: image/png\r\nCache-Control: max-age=86400\r\n","%.*s",(int)sz2,buf2);
+        mg_printf(c,"HTTP/1.1 200 OK\r\nContent-Type: image/png\r\nContent-Length: %ld\r\nCache-Control: max-age=86400\r\n\r\n",(long)sz2);
+        mg_send(c,buf2,(size_t)sz2);
         free(buf2);
         #undef SMG_IC2
     }

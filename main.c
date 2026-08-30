@@ -2929,22 +2929,6 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
                         for(int i=0;i<4;i++) if(!isalpha((unsigned char)tmp[i])){ok=0;break;}
                         for(int i=4;i<9;i++) if(!isdigit((unsigned char)tmp[i])){ok=0;break;}
                         if(ok) strncpy(tid,tmp,sizeof(tid)-1);}
-                    /* proactively cache icon from /user/appmeta/ if not already cached */
-                    if(tid[0]){
-                        char ic2[256]; snprintf(ic2,sizeof(ic2),"/data/SMPlusGui/icon-cache/%s.png",tid);
-                        struct stat ics; if(stat(ic2,&ics)!=0){
-                            char isrc[256]; snprintf(isrc,sizeof(isrc),"/user/appmeta/%s/icon0.png",tid);
-                            struct stat iss; if(stat(isrc,&iss)==0){
-                                FILE *sf=fopen(isrc,"rb");
-                                if(sf){fseek(sf,0,SEEK_END);long il=ftell(sf);fseek(sf,0,SEEK_SET);
-                                    if(il>0&&il<=524288){char *ib=malloc(il);
-                                        if(ib&&(fread(ib,1,il,sf)==(size_t)il)){
-                                            mkdir("/data/SMPlusGui",0777);mkdir("/data/SMPlusGui/icon-cache",0777);
-                                            FILE *cf=fopen(ic2,"wb");if(cf){fwrite(ib,1,il,cf);fclose(cf);}
-                                        }free(ib);}fclose(sf);}
-                            }
-                        }
-                    }
                     /* look up title_name from games JSON if available */
                     char dname[128]={0};
                     if(tid[0]&&gam_json){
@@ -3016,6 +3000,8 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
                 "/user/appmeta/%s/icon0.png",
                 "/data/homebrew/%s/sce_sys/icon0.png",
                 "/mnt/ext0/homebrew/%s/sce_sys/icon0.png",
+                "/mnt/usb0/%s/sce_sys/icon0.png",
+                "/mnt/usb1/%s/sce_sys/icon0.png",
                 NULL
             };
             char src[256]={0}; struct stat sst;
@@ -3023,7 +3009,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
                 snprintf(src,sizeof(src),ptpl[i],tid);
                 if(stat(src,&sst)!=0) src[0]=0;
             }
-            /* scan /mnt/shadowmnt/ for {tid}_* */
+            /* scan /mnt/shadowmnt/ for {tid}_* (covers mounted ffpfsc too) */
             if(!src[0]){DIR *sd=opendir("/mnt/shadowmnt");if(sd){struct dirent *de;size_t tl=strlen(tid);
                 while(!src[0]&&(de=readdir(sd))!=NULL)
                     if(strncmp(de->d_name,tid,tl)==0&&de->d_name[tl]=='_'){

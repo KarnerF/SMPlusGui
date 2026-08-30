@@ -1774,63 +1774,26 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "function loadGamePanel(retry){_gpR=(retry||0);"
           "var gl=document.getElementById('games-list');"
           "if(gl)gl.innerHTML='<p class=\"hint\">Lade...</p>';"
-          "var gp=fetch('/api/sm/games',{method:'POST'}).then(function(r){return r.json();}).catch(function(){return null;});"
-          "var ip=fetch('/api/sm/images',{method:'POST'}).then(function(r){return r.json();}).catch(function(){return null;});"
-          "Promise.all([gp,ip]).then(function(res){"
-          "var gd=res[0],id=res[1];"
-          "if(!gl)return;"
-          "var imgs=id&&id.images?id.images:[];"
-          "function smTid(mp){var b=(mp||'').split('/').pop(),t=b.split('_')[0];"
-          "return(t.length===9&&/^[A-Za-z]{4}[0-9]{5}$/.test(t))?t:'';}"
-          "window._smG=[];"
-          "if(gd&&!gd.error&&!gd.status&&gd.games&&gd.games.length){"
-          "_gpR=0;renderGamesList(gl,gd.games);"
-          "}else if(imgs.length){"
-          "var h='';window._smG=[];"
-          "imgs.forEach(function(img,i){"
-          "var tid=smTid(img.mount_point);"
-          "window._smG.push({tid:tid,path:img.path||'',mp:(img.mount_point||'').split('/').pop(),mounted:img.mounted});"
-          "var fn=(img.path||'').split('/').pop();"
-          "var sz=img.size?(img.size>1073741824?(img.size/1073741824).toFixed(2)+' GB':(img.size/1048576).toFixed(0)+' MB'):'?';"
-          "var mn=img.mounted?'<span style=\"color:#10b981;font-size:.75rem;\">&#9679; aktiv</span>'"
-          ":'<span style=\"color:var(--dim);font-size:.75rem;\">&#9675; inaktiv</span>';"
-          "var ba=img.mounted"
-          "?'<button type=\"button\" data-i=\"'+i+'\" onclick=\"_smUnmountThis(this)\" style=\"background:transparent;border:1px solid #f87171;border-radius:4px;color:#f87171;padding:3px 10px;cursor:pointer;font-size:.75rem;\">Unmount</button>'"
-          ":'<button type=\"button\" data-i=\"'+i+'\" onclick=\"_smMountThis(this)\" style=\"background:transparent;border:1px solid var(--accent);border-radius:4px;color:var(--accent);padding:3px 10px;cursor:pointer;font-size:.75rem;white-space:nowrap;\">Mount</button>';"
-          /* add timestamp to img src to bypass any browser 404 cache */
-          "var ic=tid"
-          "?'<div style=\"position:relative;width:48px;height:48px;border-radius:8px;overflow:hidden;background:#1e2a42;flex-shrink:0;\">'"
-          "+'<img src=\"/api/icon/'+tid+'?t='+Date.now()+'\" style=\"position:absolute;top:0;left:0;width:100%%;height:100%%;object-fit:cover;\" onerror=\"this.remove()\">'"
-          "+'<span style=\"position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.55rem;color:#64748b;font-family:monospace;\">'+tid.substring(0,4)+'</span></div>'"
-          ":'<div style=\"width:48px;height:48px;border-radius:8px;background:#1e2a42;flex-shrink:0;\"></div>';"
-          "h+='<div style=\"display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--border);\">'+ic;"
-          "h+='<div style=\"flex:1;min-width:0;\">';"
-          "h+='<div style=\"font-size:.83rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;\">'+fn+'</div>';"
-          "h+='<div style=\"font-family:var(--mono);font-size:.7rem;color:var(--dim);\">'+(tid||'–')+'<span style=\"font-size:.65rem;\"> &mdash; '+sz+'</span></div>';"
-          "h+='</div><div style=\"display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;\">'+mn+ba+'</div></div>';"
-          "});gl.innerHTML=h;"
-          /* auto-refresh once after 8s if all games still unmounted (SM still starting) */
-          "if(_gpR===0&&imgs.length&&imgs.every(function(x){return !x.mounted;})){"
+          "fetch('/api/sm/gamelist').then(function(r){return r.text();})"
+          ".then(function(html){"
+          "if(gl)gl.innerHTML=html;"
+          "var noData=gl&&gl.querySelector('p')&&gl.textContent.indexOf('Keine')<0&&gl.textContent.indexOf('nicht')<0;"
+          "if(_gpR===0&&gl&&!gl.querySelector('button')){"
           "setTimeout(function(){if(_gpR===0)loadGamePanel(1);},8000);}"
-          "}else{"
-          "gl.innerHTML=((!gd||gd.error||gd.status)?'<p class=\"hint\" style=\"color:#f87171;\">SM API nicht erreichbar &mdash; l\\u00e4uft ShadowMountPlus?</p>':'<p class=\"hint\">Keine Spiele gefunden</p>');"
-          "}});}"
-          "function loadGames(){loadGamePanel(0);}"
-          "function _smMountThis(el){var i=el&&el.dataset?parseInt(el.dataset.i):NaN;"
-          "if(isNaN(i))return;_smMount(i);}"
-          "function _smUnmountThis(el){var i=el&&el.dataset?parseInt(el.dataset.i):NaN;"
-          "if(isNaN(i))return;_smUnmount(i);}"
-          "function _smMount(i){var g=window._smG&&window._smG[i];if(!g)return;"
+          "}).catch(function(){"
+          "if(gl)gl.innerHTML='<p class=\"hint\" style=\"color:#f87171;\">SM API nicht erreichbar</p>';});}");
+        H("function loadGames(){loadGamePanel(0);}"
+          "function _smMount(tid,path){"
           "var gl=document.getElementById('games-list');"
-          "if(gl)gl.innerHTML='<p class=\"hint\">Mounting...</p>';"
-          /* write to manual.lst for persistence + call SM API for immediate mount */
-          "fetch('/api/manual/add?path='+encodeURIComponent(g.path),{method:'POST'});"
-          "if(g.tid){fetch('/api/sm/games/mount?title_id='+encodeURIComponent(g.tid),{method:'POST'});}"
+          "if(gl)gl.innerHTML='<p class=\"hint\">Mounting '+tid+'...</p>';"
+          "fetch('/api/manual/add?path='+encodeURIComponent(path),{method:'POST'});"
+          "if(tid)fetch('/api/sm/games/mount?title_id='+encodeURIComponent(tid),{method:'POST'});"
           "setTimeout(function(){loadGamePanel(0);},4000);}"
-          "function _smUnmount(i){var g=window._smG&&window._smG[i];if(!g)return;"
+          "function _smUnmount(tid,path){"
           "var gl=document.getElementById('games-list');"
-          "if(gl)gl.innerHTML='<p class=\"hint\">Unmounting...</p>';"
-          "if(g.tid)unmountGame(g.tid);}"); 
+          "if(gl)gl.innerHTML='<p class=\"hint\">Unmounting '+tid+'...</p>';"
+          "if(tid)fetch('/api/sm/games/unmount?title_id='+encodeURIComponent(tid),{method:'POST'}).then(function(){setTimeout(function(){loadGamePanel(0);},3000);});"
+          "else setTimeout(function(){loadGamePanel(0);},1000);}"); 
         H("function smRawDebug(){"
           "var dbg=document.getElementById('sm-raw-dbg');"
           "var pre=document.getElementById('sm-raw-pre');"
@@ -2934,6 +2897,92 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         tv[1]=tv[0]; utimes(SM_MANUAL,tv);
         mg_http_reply(c,200,"Content-Type: application/json\r\n","{\"ok\":true}");
         #undef SM_MANUAL
+    }
+    else if(mg_match(hm->uri,mg_str("/api/sm/gamelist"),NULL)){
+        /* server-side game list HTML — no JS string building needed */
+        char *imgs_json=sm_api_req("POST","/api/v1/images","{}");
+        char *out=malloc(131072); if(!out){mg_http_reply(c,500,"","");if(imgs_json)free(imgs_json);return;}
+        int pos=0;
+        #define GL(fmt,...) pos+=snprintf(out+pos,131071-pos,fmt,##__VA_ARGS__)
+        if(!imgs_json){
+            GL("<p class=\"hint\" style=\"color:#f87171;\">SM API nicht erreichbar</p>");
+        } else {
+            /* minimal JSON parse: extract each image object */
+            const char *p=strstr(imgs_json,"\"images\"");
+            if(!p){GL("<p class=\"hint\">Keine Spiele gefunden</p>");}
+            else {
+                int n=0;
+                const char *cur=p;
+                while((cur=strstr(cur,"{\"path\""))!=NULL&&pos<120000){
+                    char path[512]={0},mp[256]={0};
+                    long long sz=0; int mounted=0;
+                    /* extract path */
+                    const char *pv=strstr(cur,"\"path\":\"");
+                    if(pv){pv+=8;const char *pe=strchr(pv,'"');if(pe&&pe-pv<(int)sizeof(path)){memcpy(path,pv,pe-pv);}}
+                    /* extract mount_point */
+                    const char *mpv=strstr(cur,"\"mount_point\":\"");
+                    if(mpv){mpv+=15;const char *mpe=strchr(mpv,'"');if(mpe&&mpe-mpv<(int)sizeof(mp)){memcpy(mp,mpv,mpe-mpv);}}
+                    /* extract size */
+                    const char *sv=strstr(cur,"\"size\":");
+                    if(sv){sv+=7;sz=strtoll(sv,NULL,10);}
+                    /* extract mounted */
+                    const char *mv=strstr(cur,"\"mounted\":");
+                    if(mv){mv+=10;mounted=(mv[0]=='t');}
+                    /* extract title_id from mount_point basename */
+                    char tid[16]={0};
+                    const char *bn=strrchr(mp,'/'); bn=bn?bn+1:mp;
+                    char tmp[64]={0}; strncpy(tmp,bn,sizeof(tmp)-1);
+                    char *us=strchr(tmp,'_'); if(us)*us=0;
+                    if(strlen(tmp)==9){
+                        int ok=1;
+                        for(int i=0;i<4;i++) if(!isalpha((unsigned char)tmp[i])){ok=0;break;}
+                        for(int i=4;i<9;i++) if(!isdigit((unsigned char)tmp[i])){ok=0;break;}
+                        if(ok) strncpy(tid,tmp,sizeof(tid)-1);
+                    }
+                    /* format size */
+                    char szbuf[32]={0};
+                    if(sz>1073741824) snprintf(szbuf,sizeof(szbuf),"%.2f GB",(double)sz/1073741824.0);
+                    else snprintf(szbuf,sizeof(szbuf),"%lld MB",sz/1048576);
+                    /* extract filename from path, unescape JSON \/ sequences */
+                    char fn[256]={0};
+                    {char pp[512]={0};int pi=0;
+                     for(int i=0;path[i]&&pi<(int)sizeof(pp)-1;i++){
+                         if(path[i]=='\\'&&path[i+1]=='/'){pp[pi++]='/';i++;}
+                         else pp[pi++]=path[i];
+                     }
+                     const char *sl=strrchr(pp,'/');
+                     strncpy(fn,sl?sl+1:pp,sizeof(fn)-1);}
+                    /* build card */
+                    const char *mntcol=mounted?"color:#10b981":"color:var(--dim)";
+                    const char *mnttxt=mounted?"&#9679; aktiv":"&#9675; inaktiv";
+                    const char *btnstyle=mounted
+                        ?"background:transparent;border:1px solid #f87171;border-radius:4px;color:#f87171;padding:3px 10px;cursor:pointer;font-size:.75rem;"
+                        :"background:transparent;border:1px solid var(--accent);border-radius:4px;color:var(--accent);padding:3px 10px;cursor:pointer;font-size:.75rem;white-space:nowrap;";
+                    const char *btnfn=mounted?"_smUnmount":"_smMount";
+                    GL("<div style=\"display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--border);\">");
+                    if(tid[0]) GL("<div style=\"position:relative;width:48px;height:48px;border-radius:8px;overflow:hidden;background:#1e2a42;flex-shrink:0;\">"
+                        "<img src=\"/api/icon/%s\" style=\"position:absolute;top:0;left:0;width:100%%;height:100%%;object-fit:cover;\" onerror=\"this.remove()\">"
+                        "<span style=\"position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.55rem;color:#64748b;font-family:monospace;\">%.4s</span></div>",tid,tid);
+                    else GL("<div style=\"width:48px;height:48px;border-radius:8px;background:#1e2a42;flex-shrink:0;\"></div>");
+                    GL("<div style=\"flex:1;min-width:0;\">"
+                        "<div style=\"font-size:.83rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;\">%s</div>"
+                        "<div style=\"font-family:var(--mono);font-size:.7rem;color:var(--dim);\">%s &mdash; %s</div></div>",
+                        fn, tid[0]?tid:"–", szbuf);
+                    GL("<div style=\"display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;\">"
+                        "<span style=\"font-size:.75rem;%s;\">%s</span>"
+                        "<button type=\"button\" data-tid=\"%s\" data-path=\"%s\" onclick=\"%s(this.dataset.tid,this.dataset.path)\" style=\"%s\">%s</button>"
+                        "</div></div>",
+                        mntcol,mnttxt, tid,path, btnfn, btnstyle, mounted?"Unmount":"Mount");
+                    n++; cur++;
+                }
+                if(n==0) GL("<p class=\"hint\">Keine Spiele gefunden</p>");
+            }
+            free(imgs_json);
+        }
+        out[pos]=0;
+        #undef GL
+        mg_http_reply(c,200,"Content-Type: text/html; charset=utf-8\r\nCache-Control: no-store\r\n","%s",out);
+        free(out);
     }
     else if(mg_match(hm->uri,mg_str("/api/icon/*"),NULL)){
         /* clean path-based icon endpoint: /api/icon/PPSA20515 */

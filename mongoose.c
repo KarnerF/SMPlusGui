@@ -3501,9 +3501,10 @@ static void *p_open(const char *path, int flags) {
   MultiByteToWideChar(CP_UTF8, 0, mode, -1, b2, sizeof(b2) / sizeof(b2[0]));
   return (void *) _wfopen(b1, b2);
 #else
-  const char *mode = flags == MG_FS_READ    ? "rbe"
-                     : (flags & MG_FS_EXCL) ? "wxbe"
-                                            : "a+be"; // e for CLOSEXEC
+  /* PS5/FreeBSD: 'e' flag (O_CLOEXEC) may not be supported; use plain modes */
+  const char *mode = flags == MG_FS_READ    ? "rb"
+                     : (flags & MG_FS_EXCL) ? "wxb"
+                                            : "a+b";
   return (void *) fopen(path, mode);
 #endif
 }

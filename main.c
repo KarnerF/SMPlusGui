@@ -1780,15 +1780,11 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "if(!gd||gd.error||gd.status){"
           "gl.innerHTML='<p class=\"hint\" style=\"color:#f87171;\">SM API nicht erreichbar &mdash; l\\u00e4uft ShadowMountPlus?</p>';}"
           "else if(!gd.games||!gd.games.length){"
-          "if(_gpR<2){"
-          "gl.innerHTML='<p class=\"hint\">Warte auf SM... ('+(_gpR+1)+'/2)</p>';"
+          "if(_gpR<4){"
+          "gl.innerHTML='<p class=\"hint\">Warte auf SM... ('+(_gpR+1)+'/4)</p>';"
           "setTimeout(function(){loadGamePanel(_gpR+1);},4000);"
           "}else{"
-          "fetch('/api/local/games').then(function(r){return r.json();})"
-          ".then(function(ld){"
-          "if(ld.games&&ld.games.length)renderGamesList(gl,ld.games);"
-          "else gl.innerHTML='<p class=\"hint\">Keine Spiele &mdash; noch nichts gemountet?</p>';"
-          "}).catch(function(){gl.innerHTML='<p class=\"hint\">Keine Spiele gefunden</p>';});"
+          "gl.innerHTML='<p class=\"hint\">Keine Spiele &mdash; SM scan noch aktiv oder keine Spiele gemountet.<br>Images unten mounten &rarr; dann Refresh.</p>';"
           "}}"
           "else{_gpR=0;renderGamesList(gl,gd.games);}"
           "if(!il)return;"
@@ -1808,10 +1804,10 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "var sz=img.size?(img.size>1073741824?(img.size/1073741824).toFixed(2)+' GB':(img.size/1048576).toFixed(0)+' MB'):'?';"
           "var st=img.mounted?'<span style=\"color:#10b981;\">&#9679; aktiv</span>':'<span style=\"color:var(--dim);\">&#9675;</span>';"
           "var itid=img.title_id||'';"
-          "var iba=itid?(img.mounted"
-          "?'<button onclick=\"unmountGame(\\\''+itid+'\\\')\" style=\"background:transparent;border:1px solid #f87171;border-radius:4px;color:#f87171;padding:2px 8px;cursor:pointer;font-size:.7rem;\">Unmount</button>'"
-          ":'<button onclick=\"mountGame(\\\''+itid+'\\\')\" style=\"background:transparent;border:1px solid var(--accent);border-radius:4px;color:var(--accent);padding:2px 8px;cursor:pointer;font-size:.7rem;\">Mount</button>')"
-          ":'&ndash;';"
+          "var ipath=img.path||'';"
+          "var iba=img.mounted"
+          "?(itid?'<button onclick=\"unmountGame(\\\''+itid+'\\\')\" style=\"background:transparent;border:1px solid #f87171;border-radius:4px;color:#f87171;padding:2px 8px;cursor:pointer;font-size:.7rem;\">Unmount</button>':'<span style=\"color:#10b981;font-size:.7rem;\">&#9679; aktiv</span>')"
+          ":'<button onclick=\"manualMount(\\\''+ipath+'\\\')\" style=\"background:transparent;border:1px solid var(--accent);border-radius:4px;color:var(--accent);padding:2px 8px;cursor:pointer;font-size:.7rem;\">Mount</button>';"
           "ih+='<tr style=\"border-bottom:1px solid var(--border);\">';"
           "ih+='<td style=\"padding:6px 8px;\"><span style=\"font-family:var(--mono);font-size:.76rem;\">'+fn+'</span>';"
           "ih+='<br><span style=\"font-family:var(--mono);font-size:.65rem;color:var(--dim);\">'+dir+'</span></td>';"
@@ -1821,6 +1817,15 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "ih+='<td style=\"padding:6px 8px;text-align:center;\">'+iba+'</td></tr>';"
           "});ih+='</table>';il.innerHTML=ih;});}"
           "function loadGames(){loadGamePanel(0);}"
+          "function manualMount(path){"
+          "var il=document.getElementById('images-list');"
+          "if(il)il.innerHTML='<p class=\"hint\">Mounting...</p>';"
+          "fetch('/api/manual/add?path='+encodeURIComponent(path),{method:'POST'})"
+          ".then(function(r){return r.json();})"
+          ".then(function(d){"
+          "if(d.error&&il)il.innerHTML='<p class=\"hint\" style=\"color:#f87171;\">'+d.error+'</p>';"
+          "setTimeout(function(){loadGamePanel(0);},4000);})"
+          ".catch(function(){setTimeout(function(){loadGamePanel(0);},4000);});}"
           "function renderGamesList(el,games){"
           "if(!el||!games||!games.length){if(el)el.innerHTML='<p class=\"hint\">Keine Spiele gefunden</p>';return;}"
           "var h='';"
@@ -2875,53 +2880,26 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         write_prefs(&p);
         mg_http_reply(c,200,"Content-Type: application/json\r\n","{\"ok\":true}");
     }
-    else if(mg_match(hm->uri,mg_str("/api/local/games"),NULL)){
-        /* filesystem scan: /data/homebrew/ entries whose names are PS5 title IDs */
-        char *out=malloc(65536); if(!out){mg_http_reply(c,500,"","");return;}
-        int pos=0;
-        #define AP(fmt,...) pos+=snprintf(out+pos,65535-pos,fmt,##__VA_ARGS__)
-        AP("{\"games\":[");
-        int first=1;
-        static const char *scan_dirs[]=
-            {"/data/homebrew","/data/etaHEN/games","/mnt/ext0/homebrew",NULL};
-        /* track which title_ids we've already emitted */
-        char seen[64][10]; int nseen=0;
-        for(int di=0;scan_dirs[di]&&pos<60000;di++){
-            DIR *d=opendir(scan_dirs[di]); if(!d) continue;
-            struct dirent *de;
-            while((de=readdir(d))!=NULL&&pos<60000){
-                const char *nm=de->d_name;
-                /* PS5 title ID: exactly 9 alnum chars, first 4 alpha, last 5 digit */
-                if(strlen(nm)!=9) continue;
-                int ok=1;
-                for(int i=0;i<4;i++) if(!isalpha((unsigned char)nm[i])){ok=0;break;}
-                for(int i=4;i<9;i++) if(!isdigit((unsigned char)nm[i])){ok=0;break;}
-                if(!ok) continue;
-                /* dedup across directories */
-                int dup=0;
-                for(int s=0;s<nseen;s++) if(!strcmp(seen[s],nm)){dup=1;break;}
-                if(dup) continue;
-                if(nseen<64) {strncpy(seen[nseen++],nm,9);seen[nseen-1][9]=0;}
-                /* mounted = symlink/dir resolves via stat */
-                char gp[128]; snprintf(gp,sizeof(gp),"%s/%s",scan_dirs[di],nm);
-                struct stat st; int mounted=(stat(gp,&st)==0);
-                /* resolve symlink target for source_path */
-                char src[256]={0};
-                if(readlink(gp,src,sizeof(src)-1)<0) snprintf(src,sizeof(src),"%s",gp);
-                if(!first) AP(",");
-                AP("{\"title_id\":\"%s\",\"title_name\":\"%s\","
-                   "\"source_path\":\"%s\",\"mounted\":%s}",
-                   nm,nm,src,mounted?"true":"false");
-                first=0;
-            }
-            closedir(d);
-        }
-        #undef AP
-        out[pos]=0;
-        /* close array - append image-only entries from SM if available */
-        snprintf(out+pos,65535-pos,"]}");
-        mg_http_reply(c,200,"Content-Type: application/json\r\n","%s",out);
-        free(out);
+    else if(mg_match(hm->uri,mg_str("/api/manual/add"),NULL)){
+        /* add image path to SM's manual.lst and touch it to trigger a scan */
+        #define SM_MANUAL "/data/shadowmount/manual.lst"
+        char path[512]={0};
+        mg_http_get_var(&hm->query,"path",path,sizeof(path));
+        if(!path[0]) mg_http_get_var(&hm->body,"path",path,sizeof(path));
+        /* reject empty, relative, or traversal paths */
+        if(!path[0]||path[0]!='/'||strstr(path,".."))
+            {mg_http_reply(c,400,"Content-Type: application/json\r\n","{\"error\":\"bad path\"}");return;}
+        /* append path to manual.lst (create if absent) */
+        FILE *ml=fopen(SM_MANUAL,"a"); if(!ml)
+            {mg_http_reply(c,500,"Content-Type: application/json\r\n","{\"error\":\"open manual.lst\"}");return;}
+        fprintf(ml,"%s\n",path); fclose(ml); chmod(SM_MANUAL,0666);
+        /* touch manual.lst so SM detects the change */
+        struct timeval tv[2]; gettimeofday(&tv[0],NULL);
+        struct stat mst; if(stat(SM_MANUAL,&mst)==0&&tv[0].tv_sec<=mst.st_mtime)
+            tv[0].tv_sec=mst.st_mtime+1;
+        tv[1]=tv[0]; utimes(SM_MANUAL,tv);
+        mg_http_reply(c,200,"Content-Type: application/json\r\n","{\"ok\":true}");
+        #undef SM_MANUAL
     }
     else if(mg_match(hm->uri,mg_str("/api/game/icon"),NULL)){
         char tid[64]={0}; mg_http_get_var(&hm->query,"title_id",tid,sizeof(tid));

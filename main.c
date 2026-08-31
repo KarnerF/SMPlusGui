@@ -83,7 +83,8 @@ static void notify(const char *msg) { _notify_send(msg, NULL); }
 typedef struct {
     int auto_start;
     int icon_always_front;
-    int always_restart_sm; /* 0=only start if not running (default), 1=always restart */
+    int always_restart_sm;
+    int http_port; /* 0 = use default (7777) */
     char preferred_elf[512];
     char extra_scan[PREFS_MAX_EXTRA][256];
     int extra_scan_count;
@@ -98,6 +99,7 @@ static void read_prefs(SMPrefs *p) {
         if(strncmp(line,"auto_start=",11)==0) p->auto_start=atoi(line+11);
         else if(strncmp(line,"icon_always_front=",18)==0) p->icon_always_front=atoi(line+18);
         else if(strncmp(line,"always_restart_sm=",18)==0) p->always_restart_sm=atoi(line+18);
+        else if(strncmp(line,"http_port=",10)==0) p->http_port=atoi(line+10);
         else if(strncmp(line,"preferred_elf=",14)==0) strncpy(p->preferred_elf,line+14,511);
         else if(strncmp(line,"extra_scan=",11)==0&&p->extra_scan_count<PREFS_MAX_EXTRA)
             strncpy(p->extra_scan[p->extra_scan_count++],line+11,255);
@@ -110,6 +112,7 @@ static void write_prefs(const SMPrefs *p) {
     fprintf(f,"auto_start=%d\n",p->auto_start);
     fprintf(f,"icon_always_front=%d\n",p->icon_always_front);
     fprintf(f,"always_restart_sm=%d\n",p->always_restart_sm);
+    if(p->http_port>0) fprintf(f,"http_port=%d\n",p->http_port);
     fprintf(f,"preferred_elf=%s\n",p->preferred_elf);
     for(int i=0;i<p->extra_scan_count;i++) fprintf(f,"extra_scan=%s\n",p->extra_scan[i]);
     fclose(f);
@@ -297,7 +300,7 @@ static void terminate_existing_instances(const char *name) {
 #define CONFIG_PATH "/data/shadowmount/config.ini"
 #define BAK_DIR     "/data/SMPlusGui/backups"
 #define ICO(n) "<svg class='ico'><use href='#i-" n "'/></svg>"
-#define HTTP_PORT   "7070"
+#define HTTP_PORT   "7777"
 #define MAX_PATHS   20
 #define PATH_LEN    256
 #define MAX_IMG   50
@@ -3232,6 +3235,7 @@ int payload_main(void) {
     signal(SIGCONT, on_resume);
     (void)syscall(SYS_thr_set_name,-1,PAYLOAD_NAME);
     terminate_existing_instances(PAYLOAD_NAME);
+    { SMPrefs _sp; read_prefs(&_sp); if(_sp.http_port>1024&&_sp.http_port<65535) snprintf((char*)HTTP_PORT,8,"%d",_sp.http_port); (void)_sp; }
     char _ip[48] = {0};
     get_local_ip(_ip, sizeof(_ip));
     char _url[64];

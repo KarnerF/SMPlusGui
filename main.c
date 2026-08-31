@@ -1060,11 +1060,17 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           sm_running ? "stop" : "start",
           sm_running ? "stop" : "start",
           sm_running ? "Stop" : "Start");
-        /* show which ELF is selected for start */
-        { SMPrefs _ep; read_prefs(&_ep);
-          if(!sm_running && _ep.preferred_elf[0]){
-            const char *efn=strrchr(_ep.preferred_elf,'/'); efn=efn?efn+1:_ep.preferred_elf;
-            H("<span style='font-family:var(--mono);font-size:.65rem;color:var(--dim);margin-left:4px;'>%s</span>",efn);}
+        /* ELF selector next to Start button, hidden when SM is running */
+        if(!sm_running){
+            SMPrefs _ep; read_prefs(&_ep);
+            char elfs[SM_MAX_ELFS][SM_EPATH]; int ec=sm_find_elfs(elfs);
+            H("<select id='topbar-elf-sel' onchange='saveElfSel(this.value)' style='max-width:220px;font-size:.75rem;'>");
+            H("<option value=''>– %s –</option>",L(LS_SELECT_ELF));
+            for(int ei=0;ei<ec;ei++){
+                const char *fn=strrchr(elfs[ei],'/'); fn=fn?fn+1:elfs[ei];
+                H("<option value='%s'%s>%s</option>",elfs[ei],
+                  (_ep.preferred_elf[0]&&strcmp(_ep.preferred_elf,elfs[ei])==0)?" selected":"",fn);}
+            H("</select>");
         }
         H("</div>"); /* close left flex */
         H("<div class='lang'>"
@@ -1745,7 +1751,9 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "rows.forEach(function(r){if(r.value.trim())body+='extra_scan[]='+encodeURIComponent(r.value.trim())+'&';});"
           "fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body||'extra_scan_clear=1'});}"
           "function saveAlwaysRestart(v){fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'always_restart_sm='+(v?1:0)});}"
-          "function saveElfSel(v){fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'preferred_elf='+encodeURIComponent(v)});}"
+          "function saveElfSel(v){fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'preferred_elf='+encodeURIComponent(v)});"
+          "var s1=document.getElementById('pref-elf-sel');if(s1)s1.value=v;"
+          "var s2=document.getElementById('topbar-elf-sel');if(s2)s2.value=v;}"
           "function saveHttpPort(v){var n=parseInt(v);if(n>1024&&n<65535)fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'http_port='+n});}"
           "function saveIconFront(v){fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'icon_always_front='+(v?1:0)});}"
           "function onAS(willOn){"

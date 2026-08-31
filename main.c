@@ -300,7 +300,8 @@ static void terminate_existing_instances(const char *name) {
 #define CONFIG_PATH "/data/shadowmount/config.ini"
 #define BAK_DIR     "/data/SMPlusGui/backups"
 #define ICO(n) "<svg class='ico'><use href='#i-" n "'/></svg>"
-#define HTTP_PORT   "7777"
+static char g_http_port[8] = "7777";
+#define HTTP_PORT g_http_port
 #define MAX_PATHS   20
 #define PATH_LEN    256
 #define MAX_IMG   50
@@ -1041,11 +1042,12 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "<div style='display:flex;align-items:center;gap:12px;flex-wrap:wrap;flex:1;'>"
           "<button type='button' onclick='toggleSidebar()' style='background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--dim);padding:4px 8px;cursor:pointer;font-size:1rem;flex-shrink:0;'>" ICO("menu") "</button>"
           "<h1 style='margin:0;flex-shrink:0;'>SMPlusGui <span style='font-size:.55em;opacity:.75;font-weight:500;'>v" SMPLUS_VERSION "</span></h1>"
-          "<div class='chip'>PORT <b>" HTTP_PORT "</b></div>"
+          "<div class='chip'>PORT <b>%s</b></div>"
           "<div class='chip' id='sm-status-chip'>"
           "<span style='width:8px;height:8px;border-radius:50%%;display:inline-block;"
           "background:%s;box-shadow:0 0 6px %s;%s'></span>"
           "ShadowMount <b>%s</b></div>",
+          g_http_port,
           sm_running ? "#10b981" : "#f87171",
           sm_running ? "#10b981" : "#f87171",
           sm_running ? "animation:pulse 2s infinite;" : "",
@@ -1181,6 +1183,12 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
             "<input type='checkbox' id='ars-chk' style='display:none;'%s onchange='saveAlwaysRestart(this.checked)'>"
             "<label class='switch' for='ars-chk'></label></div>",
             L(LS_ALWAYS_RESTART_SM), prefs.always_restart_sm?" checked":"");
+          /* http port */
+          H("<div class='sublist-title' style='margin-top:16px;'>HTTP Port</div>");
+          H("<div class='numfield'><label>Port <span style='font-size:.7rem;color:var(--dim);font-weight:normal;'>(1024–65534)</span></label>"
+            "<input type='number' id='http-port-inp' min='1024' max='65534' value='%d' onchange='saveHttpPort(this.value)'></div>",
+            prefs.http_port>1024?prefs.http_port:7777);
+          H("<p class='hint' style='margin-top:4px;'>&#9432; Neustart von SMPlusGui erforderlich</p>");
           H("</div></div>"); } /* close autostart section + panel-auto */
 
         /* Panel: Auto-Remove */
@@ -1728,6 +1736,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "rows.forEach(function(r){if(r.value.trim())body+='extra_scan[]='+encodeURIComponent(r.value.trim())+'&';});"
           "fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body||'extra_scan_clear=1'});}"
           "function saveAlwaysRestart(v){fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'always_restart_sm='+(v?1:0)});}"
+          "function saveHttpPort(v){var n=parseInt(v);if(n>1024&&n<65535)fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'http_port='+n});}"
           "function saveIconFront(v){fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'icon_always_front='+(v?1:0)});}"
           "function onAS(willOn){"
           "var eb=document.getElementById('as-elf-btn');"
@@ -2817,15 +2826,17 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
             "{\"auto_start\":%d,\"preferred_elf\":\"%s\"}",p.auto_start,p.preferred_elf);
     }
     else if(mg_match(hm->uri,mg_str("/api/prefs/save"),NULL)){
-        char v[8]={0},ef[512]={0},vif[8]={0},vars[8]={0};
+        char v[8]={0},ef[512]={0},vif[8]={0},vars[8]={0},vhp[8]={0};
         mg_http_get_var(&hm->body,"auto_start",v,sizeof(v));
         mg_http_get_var(&hm->body,"preferred_elf",ef,sizeof(ef));
         mg_http_get_var(&hm->body,"icon_always_front",vif,sizeof(vif));
         mg_http_get_var(&hm->body,"always_restart_sm",vars,sizeof(vars));
+        mg_http_get_var(&hm->body,"http_port",vhp,sizeof(vhp));
         SMPrefs p; read_prefs(&p);
         if(v[0]) p.auto_start=atoi(v);
         if(vif[0]) p.icon_always_front=atoi(vif);
         if(vars[0]) p.always_restart_sm=atoi(vars);
+        if(vhp[0]){int hp=atoi(vhp);if(hp>1024&&hp<65535)p.http_port=hp;}
         if(ef[0]||mg_http_get_var(&hm->body,"preferred_elf",ef,1)>=0)
             strncpy(p.preferred_elf,ef,511);
         /* update extra_scan if present */
@@ -3235,19 +3246,20 @@ int payload_main(void) {
     signal(SIGCONT, on_resume);
     (void)syscall(SYS_thr_set_name,-1,PAYLOAD_NAME);
     terminate_existing_instances(PAYLOAD_NAME);
-    { SMPrefs _sp; read_prefs(&_sp); if(_sp.http_port>1024&&_sp.http_port<65535) snprintf((char*)HTTP_PORT,8,"%d",_sp.http_port); (void)_sp; }
+    { SMPrefs _sp; read_prefs(&_sp); if(_sp.http_port>1024&&_sp.http_port<65535) snprintf(g_http_port,sizeof(g_http_port),"%d",_sp.http_port); (void)_sp; }
     char _ip[48] = {0};
     get_local_ip(_ip, sizeof(_ip));
     char _url[64];
-    if (_ip[0]) snprintf(_url, sizeof(_url), "http://%s:" HTTP_PORT, _ip);
-    else        snprintf(_url, sizeof(_url), "Port " HTTP_PORT);
+    if (_ip[0]) snprintf(_url, sizeof(_url), "http://%s:%s", _ip, g_http_port);
+    else        snprintf(_url, sizeof(_url), "Port %s", g_http_port);
     _notify_send("SMPlusGui v" SMPLUS_VERSION, _url);
     /* simple debug notification like other payloads */
     { char dmsg[128]; snprintf(dmsg,sizeof(dmsg),"SMPlusGui v" SMPLUS_VERSION "\n%s",_url); notify_simple(dmsg); }
     struct mg_mgr mgr;
     smg_mgr = &mgr;
     mg_mgr_init(&mgr);
-    mg_http_listen(&mgr,"http://0.0.0.0:" HTTP_PORT,fn,NULL);
+    {char _lurl[32]; snprintf(_lurl,sizeof(_lurl),"http://0.0.0.0:%s",g_http_port);
+    mg_http_listen(&mgr,_lurl,fn,NULL);}
     int polls=0, as_done=0, net_timer=0;
     char cur_ip[48]; strncpy(cur_ip,_ip,47);
     { SMPrefs _p; read_prefs(&_p); /* read icon pref once at start */
@@ -3293,10 +3305,11 @@ int payload_main(void) {
                 smg_resume=0;
                 if(new_ip[0]) strncpy(cur_ip,new_ip,47);
                 mg_mgr_free(&mgr); usleep(500000); mg_mgr_init(&mgr);
-                mg_http_listen(&mgr,"http://0.0.0.0:" HTTP_PORT,fn,NULL);
+                {char _lurl2[32]; snprintf(_lurl2,sizeof(_lurl2),"http://0.0.0.0:%s",g_http_port);
+                mg_http_listen(&mgr,_lurl2,fn,NULL);}
                 smg_mgr=&mgr;
                 /* simple debug notification on restore — no icon */
-                char rmsg[128]; snprintf(rmsg,sizeof(rmsg),"Restored Service: SMPlusGui\nhttp://%s:" HTTP_PORT,cur_ip);
+                char rmsg[128]; snprintf(rmsg,sizeof(rmsg),"Restored Service: SMPlusGui\nhttp://%s:%s",cur_ip,g_http_port);
                 notify_simple(rmsg);
             } else if(!new_ip[0]&&cur_ip[0]) {
                 cur_ip[0]=0; /* IP lost — next cycle with IP will trigger restore */

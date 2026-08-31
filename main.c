@@ -1164,10 +1164,9 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
             H("<select id='pref-elf-sel' onchange='saveElfSel(this.value)'>");
             H("<option value=''>– %s –</option>",L(LS_SELECT_ELF));
             for(int ei=0;ei<ec;ei++){
-                const char *fn=strrchr(elfs[ei],'/'); fn=fn?fn+1:elfs[ei];
                 H("<option value='%s'%s>%s</option>",elfs[ei],
                   (prefs.preferred_elf[0]&&strcmp(prefs.preferred_elf,elfs[ei])==0)?" selected":"",
-                  fn);}  /* show filename, value=full path */
+                  elfs[ei]);}  /* show full path */
             H("</select></div>");}
           H("<div class='sublist-title' style='margin-top:16px;'>%s</div>",L(LS_EXTRA_SCAN));
           H("<p class='hint' style='margin-bottom:8px;'>&#9432; %s</p>",L(LS_SCAN_DEF_HINT));

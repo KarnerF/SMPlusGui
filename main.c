@@ -1060,6 +1060,12 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           sm_running ? "stop" : "start",
           sm_running ? "stop" : "start",
           sm_running ? "Stop" : "Start");
+        /* show which ELF is selected for start */
+        { SMPrefs _ep; read_prefs(&_ep);
+          if(!sm_running && _ep.preferred_elf[0]){
+            const char *efn=strrchr(_ep.preferred_elf,'/'); efn=efn?efn+1:_ep.preferred_elf;
+            H("<span style='font-family:var(--mono);font-size:.65rem;color:var(--dim);margin-left:4px;'>%s</span>",efn);}
+        }
         H("</div>"); /* close left flex */
         H("<div class='lang'>"
           "<a href='/setlang?l=auto' class='%s'>AUTO</a>"
@@ -1152,19 +1158,21 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         /* Panel: Mounting */
         /* ── Autostart panel ── */
         { SMPrefs prefs; read_prefs(&prefs);
-          const char *elfname=L(LS_SELECT_ELF);
-          if(prefs.preferred_elf[0]){const char *sl=strrchr(prefs.preferred_elf,'/');elfname=sl?sl+1:prefs.preferred_elf;}
           H("<div id='panel-auto' class='panel'><div class='section'>");
           H("<div class='sublist-title'>Startoptionen</div>");
           H("<div class='row'><label>%s</label>"
             "<input type='checkbox' id='as-chk' style='display:none;'%s onchange='onAS(this.checked)'>"
             "<label class='switch' for='as-chk'></label></div>",
             L(LS_AUTOSTART), prefs.auto_start?" checked":"");
-          H("<div class='numfield' style='margin-top:12px;'><label>%s</label>"
-            "<button type='button' id='as-elf-btn' onclick='pickASElf()' "
-            "style='background:transparent;border:1px solid var(--border);border-radius:6px;"
-            "color:var(--dim);padding:5px 12px;cursor:pointer;font-family:var(--mono);font-size:.8rem;'>%s &#9660;</button></div>",
-            L(LS_PREF_ELF), elfname);
+          H("<div class='numfield' style='margin-top:12px;'><label>%s</label>",L(LS_PREF_ELF));
+          { char elfs[SM_MAX_ELFS][SM_EPATH]; int ec=sm_find_elfs(elfs);
+            H("<select id='pref-elf-sel' onchange='saveElfSel(this.value)'>");
+            H("<option value=''>– %s –</option>",L(LS_SELECT_ELF));
+            for(int ei=0;ei<ec;ei++){
+                H("<option value='%s'%s>%s</option>",elfs[ei],
+                  (prefs.preferred_elf[0]&&strcmp(prefs.preferred_elf,elfs[ei])==0)?" selected":"",
+                  elfs[ei]);}  /* show full path */
+            H("</select></div>");}
           H("<div class='sublist-title' style='margin-top:16px;'>%s</div>",L(LS_EXTRA_SCAN));
           H("<p class='hint' style='margin-bottom:8px;'>&#9432; %s</p>",L(LS_SCAN_DEF_HINT));
           H("<div id='extra-scan-list'>");
@@ -1737,6 +1745,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "rows.forEach(function(r){if(r.value.trim())body+='extra_scan[]='+encodeURIComponent(r.value.trim())+'&';});"
           "fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body||'extra_scan_clear=1'});}"
           "function saveAlwaysRestart(v){fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'always_restart_sm='+(v?1:0)});}"
+          "function saveElfSel(v){fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'preferred_elf='+encodeURIComponent(v)});}"
           "function saveHttpPort(v){var n=parseInt(v);if(n>1024&&n<65535)fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'http_port='+n});}"
           "function saveIconFront(v){fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'icon_always_front='+(v?1:0)});}"
           "function onAS(willOn){"

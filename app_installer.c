@@ -51,7 +51,7 @@ static int write_file(const char *p, const uint8_t *d, size_t s) {
     return w == s ? 0 : -1;
 }
 
-void smplus_install_if_needed(int icon_always_front) {
+void smplus_install_if_needed(int icon_always_front, int http_port) {
     /* In once-only mode, skip if marker exists */
     if(!icon_always_front) {
         FILE *m = fopen(MARKER, "r");
@@ -70,6 +70,16 @@ void smplus_install_if_needed(int icon_always_front) {
     mkdir(sdir, 0755);
 
     if (write_file(par, sm_param_json, sm_param_json_size) != 0) goto done;
+    /* patch deeplink port in the written param.json */
+    {FILE *pf=fopen(par,"r+");if(pf){
+        char buf[1024]={0};fread(buf,1,sizeof(buf)-1,pf);
+        char old_url[64],new_url[64];
+        snprintf(old_url,sizeof(old_url),"http://127.0.0.1:7777/");
+        snprintf(new_url,sizeof(new_url),"http://127.0.0.1:%d/",http_port>1024?http_port:7777);
+        char *pos=strstr(buf,old_url);
+        if(pos&&strlen(old_url)==strlen(new_url)){memcpy(pos,new_url,strlen(new_url));
+            fseek(pf,0,SEEK_SET);fwrite(buf,1,strlen(buf),pf);}
+        fclose(pf);}}
     if (write_file(ico, sm_icon0_png,  sm_icon0_png_size)  != 0) goto done;
 
     install_title_dir(TITLE_ID, APP_ROOT "/");

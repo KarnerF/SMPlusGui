@@ -3265,7 +3265,7 @@ int payload_main(void) {
     { SMPrefs _p; read_prefs(&_p); /* read icon pref once at start */
     while(1){
         mg_mgr_poll(&mgr,1000); usleep(100000);
-        if(++polls==3) smplus_install_if_needed(_p.icon_always_front);
+        if(++polls==3) smplus_install_if_needed(_p.icon_always_front, _p.http_port>1024?_p.http_port:7777);
         /* send pending ELF after browser got its {ok:true} response */
         if(smg_pending_elf[0]){ send_elf_to_elfldr(smg_pending_elf); smg_pending_elf[0]=0; }
         if(polls==6 && !as_done){ /* ~6s after start — give elfldr time to initialize */

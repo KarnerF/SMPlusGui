@@ -1056,23 +1056,10 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
             H("<div class='chip' id='sm-ver-chip'>v <b>%s</b></div>", sm_ver);
         else
             H("<div class='chip' id='sm-ver-chip' style='display:none;'>v</div>");
-        H("<button id='sm-ctrl-btn' class='sm-ctrl %s' data-action='%s' onclick='%s'>%s</button>",
+        H("<button id='sm-ctrl-btn' class='sm-ctrl %s' data-action='%s' onclick='smCtrl()'>%s</button>",
           sm_running ? "stop" : "start",
           sm_running ? "stop" : "start",
-          sm_running ? "smCtrl()" : "smCtrlPick()",
           sm_running ? "Stop" : "Start");
-        /* ELF selector next to Start button, hidden when SM is running */
-        if(!sm_running){
-            SMPrefs _ep; read_prefs(&_ep);
-            char elfs[SM_MAX_ELFS][SM_EPATH]; int ec=sm_find_elfs(elfs);
-            H("<select id='topbar-elf-sel' onchange='startWithElf(this.value)' style='display:none;max-width:220px;font-size:.75rem;'>");
-            H("<option value=''>– %s –</option>",L(LS_SELECT_ELF));
-            for(int ei=0;ei<ec;ei++){
-                const char *fn=strrchr(elfs[ei],'/'); fn=fn?fn+1:elfs[ei];
-                H("<option value='%s'%s>%s</option>",elfs[ei],
-                  (_ep.preferred_elf[0]&&strcmp(_ep.preferred_elf,elfs[ei])==0)?" selected":"",fn);}
-            H("</select>");
-        }
         H("</div>"); /* close left flex */
         H("<div class='lang'>"
           "<a href='/setlang?l=auto' class='%s'>AUTO</a>"

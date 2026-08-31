@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 
@@ -52,11 +53,22 @@ static int write_file(const char *p, const uint8_t *d, size_t s) {
 }
 
 void smplus_install_if_needed(int icon_always_front, int http_port) {
-    /* In once-only mode, skip if marker exists */
-    if(!icon_always_front) {
-        FILE *m = fopen(MARKER, "r");
-        if (m) { fclose(m); return; }
+    int port = http_port>1024 ? http_port : 7777;
+    int need = icon_always_front;
+    if(!need){
+        /* reinstall if tile directory is missing */
+        struct stat tst; char tdir[256];
+        snprintf(tdir,sizeof(tdir),APP_ROOT "/%s",TITLE_ID);
+        if(stat(tdir,&tst)!=0) need=1;
     }
+    if(!need){
+        /* reinstall if marker missing or port changed */
+        FILE *m=fopen(MARKER,"r");
+        if(!m){need=1;}
+        else{char buf[16]={0};fread(buf,1,sizeof(buf)-1,m);fclose(m);
+             if(atoi(buf)!=port) need=1;}
+    }
+    if(!need) return;
 
     if (sceAppInstUtilInitialize() != 0) return;
     char adir[256], sdir[256], par[256], ico[256];
@@ -84,7 +96,9 @@ void smplus_install_if_needed(int icon_always_front, int http_port) {
 
     install_title_dir(TITLE_ID, APP_ROOT "/");
     mkdir("/data/SMPlusGui", 0755);
-    write_file(MARKER, (const uint8_t *)"ok\n", 3);
+    /* write port to marker so changes trigger reinstall */
+    {char pm[16]; snprintf(pm,sizeof(pm),"%d\n",port);
+     write_file(MARKER,(const uint8_t *)pm,strlen(pm));}
 
 done:
     sceAppInstUtilTerminate();

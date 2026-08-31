@@ -1101,7 +1101,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         H("<nav class='sidebar'>");
         H("<button type='button' class='nav-item active' data-p='mnt' onclick='showP(this)'>Mounting</button>");
         H("<button type='button' class='nav-item' data-p='scn' onclick='showP(this)'>Scan</button>");
-        H("<button type='button' class='nav-item' data-p='auto' onclick='showP(this)'>Startoptionen</button>");
+        H("<button type='button' class='nav-item' data-p='auto' onclick='showP(this)'>%s</button>",L(LS_STARTOPTS));
         H("<button type='button' class='nav-item' data-p='arm' onclick='showP(this)'>Auto-Remove</button>");
         H("<div class='nav-sep'></div>");
         H("<button type='button' class='nav-item' data-p='kst' onclick='showP(this)'>kstuff</button>");
@@ -1153,7 +1153,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         /* ── Autostart panel ── */
         { SMPrefs prefs; read_prefs(&prefs);
           H("<div id='panel-auto' class='panel'><div class='section'>");
-          H("<div class='sublist-title'>Startoptionen</div>");
+          H("<div class='sublist-title'>%s</div>",L(LS_STARTOPTS));
           H("<div class='row'><label>%s</label>"
             "<input type='checkbox' id='as-chk' style='display:none;'%s onchange='onAS(this.checked)'>"
             "<label class='switch' for='as-chk'></label></div>",
@@ -1191,7 +1191,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           H("<div class='numfield'><label>Port <span style='font-size:.7rem;color:var(--dim);font-weight:normal;'>(1024–65534)</span></label>"
             "<input type='number' id='http-port-inp' min='1024' max='65534' value='%d' onchange='saveHttpPort(this.value)'></div>",
             prefs.http_port>1024?prefs.http_port:7777);
-          H("<p class='hint' style='margin-top:4px;'>&#9432; Neustart von SMPlusGui erforderlich</p>");
+          H("<p class='hint' style='margin-top:4px;'>&#9432; %s</p>",L(LS_RESTART_REQUIRED));
           H("</div></div>"); } /* close autostart section + panel-auto */
 
         /* Panel: Auto-Remove */

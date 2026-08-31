@@ -134,7 +134,9 @@ typedef enum {
     LS_EMUS_PATH = 122,
     LS_GAMES = 123,
     LS_IMAGES = 124,
-    LS_COUNT = 125
+    LS_STARTOPTS = 125,
+    LS_RESTART_REQUIRED = 126,
+    LS_COUNT = 127
 } LangStrId;
 
 static int ui_lang = LANG_EN;
@@ -266,6 +268,8 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "Emulator-Ordner",
         "Spiele",
         "Images",
+        "Startoptionen",
+        "Neustart von SMPlusGui erforderlich",
     },
     /* EN */ {
         "running",
@@ -392,6 +396,8 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "Emulators path",
         "Games",
         "Images",
+        "Start Options",
+        "Restart SMPlusGui to apply",
     },
     /* FR */ {
         "actif",
@@ -519,6 +525,8 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "Dossier des \u00e9mulateurs",
         "Jeux",
         "Images",
+        "Options de d\u00e9marrage",
+        "Red\u00e9marrer SMPlusGui pour appliquer",
     },
     /* ES */ {
         "activo",
@@ -646,6 +654,8 @@ static const char *lang_table[LANG_COUNT][LS_COUNT] = {
         "Ruta de emuladores",
         "Juegos",
         "Im\u00e1genes",
+        "Opciones de inicio",
+        "Reiniciar SMPlusGui para aplicar",
     }
 };
 

@@ -1101,7 +1101,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         H("<nav class='sidebar'>");
         H("<button type='button' class='nav-item active' data-p='mnt' onclick='showP(this)'>Mounting</button>");
         H("<button type='button' class='nav-item' data-p='scn' onclick='showP(this)'>Scan</button>");
-        H("<button type='button' class='nav-item' data-p='auto' onclick='showP(this)'>Autostart</button>");
+        H("<button type='button' class='nav-item' data-p='auto' onclick='showP(this)'>Startoptionen</button>");
         H("<button type='button' class='nav-item' data-p='arm' onclick='showP(this)'>Auto-Remove</button>");
         H("<div class='nav-sep'></div>");
         H("<button type='button' class='nav-item' data-p='kst' onclick='showP(this)'>kstuff</button>");
@@ -1155,7 +1155,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           const char *elfname=L(LS_SELECT_ELF);
           if(prefs.preferred_elf[0]){const char *sl=strrchr(prefs.preferred_elf,'/');elfname=sl?sl+1:prefs.preferred_elf;}
           H("<div id='panel-auto' class='panel'><div class='section'>");
-          H("<div class='sublist-title'>Autostart</div>");
+          H("<div class='sublist-title'>Startoptionen</div>");
           H("<div class='row'><label>%s</label>"
             "<input type='checkbox' id='as-chk' style='display:none;'%s onchange='onAS(this.checked)'>"
             "<label class='switch' for='as-chk'></label></div>",
@@ -1178,7 +1178,8 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
             "<input type='checkbox' id='icon-front-chk' style='display:none;'%s onchange='saveIconFront(this.checked)'>"
             "<label class='switch' for='icon-front-chk'></label></div>",
             L(LS_ICON_FRONT_LABEL), prefs.icon_always_front?" checked":"");
-          /* always-restart option */
+          /* always-restart in its own section, not under icon-position */
+          H("<div class='sublist-title' style='margin-top:16px;'>ShadowMountPlus</div>");
           H("<div class='row'><label>%s</label>"
             "<input type='checkbox' id='ars-chk' style='display:none;'%s onchange='saveAlwaysRestart(this.checked)'>"
             "<label class='switch' for='ars-chk'></label></div>",

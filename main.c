@@ -1056,10 +1056,9 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
             H("<div class='chip' id='sm-ver-chip'>v <b>%s</b></div>", sm_ver);
         else
             H("<div class='chip' id='sm-ver-chip' style='display:none;'>v</div>");
-        H("<button id='sm-ctrl-btn' class='sm-ctrl %s' data-action='%s' onclick='%s'>%s</button>",
+        H("<button id='sm-ctrl-btn' class='sm-ctrl %s' data-action='%s' onclick='smCtrl()'>%s</button>",
           sm_running ? "stop" : "start",
           sm_running ? "stop" : "start",
-          sm_running ? "smCtrl()" : "smCtrlPick()",
           sm_running ? "Stop" : "Start");
         H("</div>"); /* close left flex */
         H("<div class='lang'>"
@@ -1741,10 +1740,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body||'extra_scan_clear=1'});}"
           "function saveAlwaysRestart(v){fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'always_restart_sm='+(v?1:0)});}"
           "function saveElfSel(v){fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'preferred_elf='+encodeURIComponent(v)});"
-          "var s1=document.getElementById('pref-elf-sel');if(s1)s1.value=v;"
-          "var s2=document.getElementById('topbar-elf-sel');if(s2)s2.value=v;}"
-          "function smCtrlPick(){var v=document.getElementById('pref-elf-sel');if(v&&v.value){launchElf(document.getElementById('sm-ctrl-btn'),v.value);return;}smCtrl();}"
-          "function startWithElf(v){if(!v)return;var sel=document.getElementById('topbar-elf-sel');if(sel){sel.style.display='none';sel.size=0;}saveElfSel(v);launchElf(document.getElementById('sm-ctrl-btn'),v);}"
+          "var s1=document.getElementById('pref-elf-sel');if(s1)s1.value=v;}"
           "function saveHttpPort(v){var n=parseInt(v);if(n>1024&&n<65535)fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'http_port='+n});}"
           "function saveIconFront(v){fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'icon_always_front='+(v?1:0)});}"
           "function onAS(willOn){"

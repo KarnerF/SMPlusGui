@@ -1056,9 +1056,10 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
             H("<div class='chip' id='sm-ver-chip'>v <b>%s</b></div>", sm_ver);
         else
             H("<div class='chip' id='sm-ver-chip' style='display:none;'>v</div>");
-        H("<button id='sm-ctrl-btn' class='sm-ctrl %s' data-action='%s' onclick='smCtrl()'>%s</button>",
+        H("<button id='sm-ctrl-btn' class='sm-ctrl %s' data-action='%s' onclick='%s'>%s</button>",
           sm_running ? "stop" : "start",
           sm_running ? "stop" : "start",
+          sm_running ? "smCtrl()" : "smCtrlPick()",
           sm_running ? "Stop" : "Start");
         H("</div>"); /* close left flex */
         H("<div class='lang'>"
@@ -1163,9 +1164,10 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
             H("<select id='pref-elf-sel' onchange='saveElfSel(this.value)'>");
             H("<option value=''>– %s –</option>",L(LS_SELECT_ELF));
             for(int ei=0;ei<ec;ei++){
+                const char *fn=strrchr(elfs[ei],'/'); fn=fn?fn+1:elfs[ei];
                 H("<option value='%s'%s>%s</option>",elfs[ei],
                   (prefs.preferred_elf[0]&&strcmp(prefs.preferred_elf,elfs[ei])==0)?" selected":"",
-                  elfs[ei]);}  /* show full path */
+                  fn);}  /* show filename, value=full path */
             H("</select></div>");}
           H("<div class='sublist-title' style='margin-top:16px;'>%s</div>",L(LS_EXTRA_SCAN));
           H("<p class='hint' style='margin-bottom:8px;'>&#9432; %s</p>",L(LS_SCAN_DEF_HINT));
@@ -1742,7 +1744,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "function saveElfSel(v){fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'preferred_elf='+encodeURIComponent(v)});"
           "var s1=document.getElementById('pref-elf-sel');if(s1)s1.value=v;"
           "var s2=document.getElementById('topbar-elf-sel');if(s2)s2.value=v;}"
-          "function smCtrlPick(){var sel=document.getElementById('topbar-elf-sel');if(sel){sel.style.display='';sel.focus();sel.size=sel.options.length;return;}smCtrl();}"
+          "function smCtrlPick(){var v=document.getElementById('pref-elf-sel');if(v&&v.value){launchElf(document.getElementById('sm-ctrl-btn'),v.value);return;}smCtrl();}"
           "function startWithElf(v){if(!v)return;var sel=document.getElementById('topbar-elf-sel');if(sel){sel.style.display='none';sel.size=0;}saveElfSel(v);launchElf(document.getElementById('sm-ctrl-btn'),v);}"
           "function saveHttpPort(v){var n=parseInt(v);if(n>1024&&n<65535)fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'http_port='+n});}"
           "function saveIconFront(v){fetch('/api/prefs/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'icon_always_front='+(v?1:0)});}"

@@ -65,8 +65,9 @@ void smplus_install_if_needed(int icon_always_front, int http_port) {
         /* reinstall if marker missing or port changed */
         FILE *m=fopen(MARKER,"r");
         if(!m){need=1;}
-        else{char buf[16]={0};fread(buf,1,sizeof(buf)-1,m);fclose(m);
-             if(atoi(buf)!=port) need=1;}
+           else{char buf[32]={0};fread(buf,1,sizeof(buf)-1,m);fclose(m);
+               char expected[32]; snprintf(expected,sizeof(expected),"%d|media",port);
+               if(strcmp(buf,expected)!=0) need=1;}
     }
     if(!need) return;
 
@@ -97,7 +98,7 @@ void smplus_install_if_needed(int icon_always_front, int http_port) {
     install_title_dir(TITLE_ID, APP_ROOT "/");
     mkdir("/data/SMPlusGui", 0755);
     /* write port to marker so changes trigger reinstall */
-    {char pm[16]; snprintf(pm,sizeof(pm),"%d\n",port);
+    {char pm[32]; snprintf(pm,sizeof(pm),"%d|media",port);
      write_file(MARKER,(const uint8_t *)pm,strlen(pm));}
 
 done:

@@ -1,5 +1,5 @@
 {
-  "applicationCategoryType": 1,
+  "applicationCategoryType": "media",
   "titleId": "SMPL00001",
   "deeplinkUri": "http://127.0.0.1:7777/",
   "localizedParameters": {

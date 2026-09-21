@@ -1100,6 +1100,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         int has_fan       = !sm_running || sm_version_at_least(sm_ver,1,7,"alpha",5);
         int has_legacy_mp = !sm_running || !sm_version_at_least(sm_ver,1,7,"beta",1);
         int has_emus      = !sm_running || sm_version_at_least(sm_ver,1,7,"alpha",7);
+        int has_npic      = !sm_running || sm_version_at_least(sm_ver,1,7,"alpha",9);
 
         H("<form action='/save' method='POST' onsubmit='try{doSave();}catch(e){}return false;' style='flex:1;min-height:0;display:flex;flex-direction:column;'><div class='layout'>");
         H("<nav class='sidebar'>");
@@ -1321,10 +1322,10 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         H("<div id='panel-bkd' class='panel'><div class='section'>");
         H("<div class='sublist-title'>Backend</div>");
         H("<div class='sublist-title' style='margin-top:8px;'>PFS</div>");
-        H("<div class='row'><label>nested_pfs_index_cache <span class='vbadge'>ab 1.7alpha9</span></label>"
+        H("<div class='row'><label>nested_pfs_index_cache <span class='vbadge' style='%s'>ab 1.7alpha9</span></label>"
           "<input type='checkbox' id='lgc' name='nested_pfs_index_cache' value='1' %s>"
           "<label class='switch' for='lgc'></label></div>",
-          cfg.nested_pfs_index_cache?"checked":"");
+          has_npic?"display:none;":"",cfg.nested_pfs_index_cache?"checked":"");
         H("<p class='hint' style='margin-bottom:12px;margin-top:16px;'>&#9432; %s</p>",L(LS_SECTOR_HINT));
         H("<div class='numfield'><label>%s</label>"
           "<select name='exfat_backend'>"

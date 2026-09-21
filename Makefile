@@ -30,4 +30,4 @@ test: $(TARGET)
 	$(PS5_DEPLOY) -h $(PS5_HOST) -p $(PS5_PORT) $(TARGET)
 
 clean:
-	rm -f SMPlusGui_*.elf
+	rm -f $(TARGET)

@@ -1355,6 +1355,11 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           for(int t=50;t<=91;t++)
               H("<option value='%d'%s>%d&deg;C</option>",t,cur==t?" selected":"",t); }
         H("</select></div></div>");
+                H("<div class='sublist-title' style='margin-top:16px;'>PFS</div>");
+                H("<div class='row'><label>nested_pfs_index_cache <span class='vbadge' style=''>ab 1.7alpha9</span></label>"
+                    "<input type='checkbox' id='lgc' name='nested_pfs_index_cache' value='1' %s>"
+                    "<label class='switch' for='lgc'></label></div>",
+                    cfg.nested_pfs_index_cache?"checked":"");
                 /* Legacy profiles remain parse-compatible for older SM versions. */
                 H("<div style='%s'><div class='sublist-title' style='margin-top:16px;'>%s</div>",
                     has_legacy_mp?"":"display:none",L(LS_LEGACY_MOUNT));
@@ -1375,11 +1380,6 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "<label class='switch' for='lmpc'></label></div>",
           has_legacy_mp?"display:none;":"",cfg.legacy_mount_pfsc?"checked":"");
             H("</div></div>");
-            H("<div class='sublist-title' style='margin-top:16px;'>PFS</div>");
-                H("<div class='row'><label>nested_pfs_index_cache <span class='vbadge' style='%s'>ab 1.7alpha9</span></label>"
-          "<input type='checkbox' id='lgc' name='nested_pfs_index_cache' value='1' %s>"
-          "<label class='switch' for='lgc'></label></div>",
-                    "",cfg.nested_pfs_index_cache?"checked":"");
         H("</div></div>"); /* close backend section + panel-bkd */
 
         /* Panel: API */

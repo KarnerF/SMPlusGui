@@ -1320,7 +1320,12 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         /* Panel: Backend */
         H("<div id='panel-bkd' class='panel'><div class='section'>");
         H("<div class='sublist-title'>Backend</div>");
-        H("<p class='hint' style='margin-bottom:12px;'>&#9432; %s</p>",L(LS_SECTOR_HINT));
+        H("<div class='sublist-title' style='margin-top:8px;'>PFS</div>");
+        H("<div class='row'><label>nested_pfs_index_cache <span class='vbadge'>ab 1.7alpha9</span></label>"
+          "<input type='checkbox' id='lgc' name='nested_pfs_index_cache' value='1' %s>"
+          "<label class='switch' for='lgc'></label></div>",
+          cfg.nested_pfs_index_cache?"checked":"");
+        H("<p class='hint' style='margin-bottom:12px;margin-top:16px;'>&#9432; %s</p>",L(LS_SECTOR_HINT));
         H("<div class='numfield'><label>%s</label>"
           "<select name='exfat_backend'>"
           "<option value='lvd'%s>lvd &mdash; /dev/lvdctl</option>"
@@ -1355,14 +1360,9 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           for(int t=50;t<=91;t++)
               H("<option value='%d'%s>%d&deg;C</option>",t,cur==t?" selected":"",t); }
         H("</select></div></div>");
-                H("<div class='sublist-title' style='margin-top:16px;'>PFS</div>");
-                H("<div class='row'><label>nested_pfs_index_cache <span class='vbadge' style=''>ab 1.7alpha9</span></label>"
-                    "<input type='checkbox' id='lgc' name='nested_pfs_index_cache' value='1' %s>"
-                    "<label class='switch' for='lgc'></label></div>",
-                    cfg.nested_pfs_index_cache?"checked":"");
-                /* Legacy profiles remain parse-compatible for older SM versions. */
-                H("<div style='%s'><div class='sublist-title' style='margin-top:16px;'>%s</div>",
-                    has_legacy_mp?"":"display:none",L(LS_LEGACY_MOUNT));
+        /* Legacy profiles remain parse-compatible for older SM versions. */
+        H("<div style='%s'><div class='sublist-title' style='margin-top:16px;'>%s</div>",
+          has_legacy_mp?"":"display:none",L(LS_LEGACY_MOUNT));
         H("<div class='row'><label>legacy_mount_ufs (.ffpkg) <span class='vbadge' style='%s'>ab 1.7alpha7</span></label>"
           "<input type='checkbox' id='lmu' name='legacy_mount_ufs' value='1' %s>"
           "<label class='switch' for='lmu'></label></div>",

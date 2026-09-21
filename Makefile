@@ -4,7 +4,7 @@ else
     $(error PS5_PAYLOAD_SDK is undefined)
 endif
 
-VERSION := 1.0.0
+VERSION := 1.0.1
 TARGET  := SMPlusGui_v$(VERSION).elf
 CFLAGS  += -Wall -g -I. \
            -DPLATFORM_PS5 \

@@ -1374,11 +1374,11 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "<input type='checkbox' id='lmpc' name='legacy_mount_pfsc' value='1' %s>"
           "<label class='switch' for='lmpc'></label></div>",
           has_legacy_mp?"display:none;":"",cfg.legacy_mount_pfsc?"checked":"");
-        H("<div class='row'><label>nested_pfs_index_cache <span class='vbadge' style='%s'>ab 1.7alpha9</span></label>"
+                H("</div>");
+                H("<div class='row'><label>nested_pfs_index_cache <span class='vbadge' style='%s'>ab 1.7alpha9</span></label>"
           "<input type='checkbox' id='lgc' name='nested_pfs_index_cache' value='1' %s>"
           "<label class='switch' for='lgc'></label></div>",
-          has_legacy_mp?"display:none;":"",cfg.nested_pfs_index_cache?"checked":"");
-        H("</div>");
+                    "display:none;",cfg.nested_pfs_index_cache?"checked":"");
         H("</div></div>"); /* close backend section + panel-bkd */
 
         /* Panel: API */

@@ -25,7 +25,7 @@ make
 
 ## Usage
 
-1. Load `SMPlusGui_v1.0.0.elf`
+1. Load `SMPlusGui_v1.0.1.elf`
 2. Open `http://<PS5-IP>:7777`
 3. Change settings, hit **Save**
 

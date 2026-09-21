@@ -928,7 +928,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         { FILE *mf=fopen(MANUAL_LST,"r"); if(mf){ char ml[PATH_LEN]; while(fgets(ml,sizeof(ml),mf)&&manual_count<MAX_MANUAL){ ml[strcspn(ml,"\r\n")]=0; char *ms=ml; while(*ms==' '||*ms=='\t')ms++; if(*ms=='#'||!*ms)continue; strncpy(manual_entries[manual_count++],ms,PATH_LEN-1); } fclose(mf); } }
         char sm_ver[64]; get_sm_version(sm_ver,sizeof(sm_ver));
 
-        size_t hsz=262144;
+        size_t hsz=1048576;
         char *html=malloc(hsz);
         if(!html){mg_http_reply(c,500,"","OOM");return;}
         int pos=0;

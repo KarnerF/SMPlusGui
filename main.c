@@ -317,6 +317,7 @@ typedef struct {
     int  quiet_mode;
     char language[32];
     /* API */
+    int  api_enabled;
     char api_bind_address[64];
     int  api_port;
     /* Mounting */
@@ -388,7 +389,7 @@ static void set_defaults(ShadowConfig *cfg) {
     cfg->debug=0; cfg->quiet_mode=0;
     strncpy(cfg->language,"auto",31);
     strncpy(cfg->api_bind_address,"127.0.0.1",63);
-    cfg->api_port=10101;
+    cfg->api_enabled=1; cfg->api_port=10101;
     cfg->mount_read_only=1; cfg->force_mount=0;
     cfg->persistent_image_mounts=0; cfg->app_install_all=0;
     cfg->scan_depth=1; cfg->recursive_scan=0; cfg->scan_interval_seconds=15; cfg->stability_wait_seconds=10;
@@ -401,8 +402,8 @@ static void set_defaults(ShadowConfig *cfg) {
     strncpy(cfg->global_fakelib_priority,"game",15);
     strncpy(cfg->exfat_backend,"lvd",7); strncpy(cfg->ufs_backend,"lvd",7);
     cfg->lvd_exfat_sector_size=512; cfg->lvd_ufs_sector_size=4096;
-    cfg->lvd_pfs_sector_size=32768; cfg->md_exfat_sector_size=512;
-    cfg->md_ufs_sector_size=512;
+    cfg->lvd_pfs_sector_size=4096; cfg->md_exfat_sector_size=512;
+    cfg->md_ufs_sector_size=4096;
     cfg->image_ro_count=0; cfg->image_rw_count=0; cfg->image_sector_count=0;
     cfg->kstuff_no_pause_count=0; cfg->kstuff_delay_count=0;
     cfg->global_fakelib_exclude_count=0;
@@ -438,6 +439,7 @@ static void load_config(ShadowConfig *cfg) {
         B("debug",debug)
         B("quiet_mode",quiet_mode)
         S("language",language,32)
+        B("api_enabled",api_enabled)
         else if(!strcmp(key,"api_bind_address")){strncpy(cfg->api_bind_address,val,63);}
         I("api_port",api_port)
         B("mount_read_only",mount_read_only)
@@ -508,7 +510,7 @@ static int save_config(ShadowConfig *cfg) {
     if(f){while(lc<2048&&fgets(lines[lc],512,f))lc++;fclose(f);}
     FILE *out=fopen(CONFIG_PATH,"w"); if(!out) return 0;
 
-    int wd=0,wq=0,wlang=0,wapi=0,wport=0;
+    int wd=0,wq=0,wlang=0,wapien=0,wapi=0,wport=0;
     int wro=0,wfm=0,wpim=0,waia=0;
     int wsd=0,wrs=0,wsi=0,wss=0;
     int warm=0,wargd=0,warmd=0;
@@ -528,6 +530,7 @@ static int save_config(ShadowConfig *cfg) {
         if(MATCH("debug")&&!wd){fprintf(out,"debug=%d\n",cfg->debug);wd=1;}
         else if(MATCH("quiet_mode")&&!wq){fprintf(out,"quiet_mode=%d\n",cfg->quiet_mode);wq=1;}
         else if(MATCH("language")&&!wlang){fprintf(out,"language=%s\n",cfg->language);wlang=1;}
+        else if(MATCH("api_enabled")&&!wapien){fprintf(out,"api_enabled=%d\n",cfg->api_enabled);wapien=1;}
         else if(MATCH("api_bind_address")&&!wapi){fprintf(out,"api_bind_address=%s\n",cfg->api_bind_address);wapi=1;}
         else if(MATCH("api")&&!wapi){fprintf(out,"api_bind_address=%s\n",cfg->api_bind_address);wapi=1;} /* migrate combined key */
         else if(MATCH("api_port")&&!wport){fprintf(out,"api_port=%d\n",cfg->api_port);wport=1;}
@@ -591,7 +594,7 @@ static int save_config(ShadowConfig *cfg) {
             if(*p=='#'||!strchr(p,'=')) fputs(lines[i],out);
             else if(!(
                 MATCH("debug")||MATCH("quiet_mode")||MATCH("language")||
-                MATCH("api_bind_address")||MATCH("api_port")||MATCH("api")||
+                MATCH("api_enabled")||MATCH("api_bind_address")||MATCH("api_port")||MATCH("api")||
                 MATCH("mount_read_only")||MATCH("force_mount")||
                 MATCH("persistent_image_mounts")||MATCH("app_install_all")||
                 MATCH("scan_depth")||MATCH("recursive_scan")||
@@ -620,6 +623,7 @@ static int save_config(ShadowConfig *cfg) {
     if(!wd)    fprintf(out,"debug=%d\n",cfg->debug);
     if(!wq)    fprintf(out,"quiet_mode=%d\n",cfg->quiet_mode);
     if(!wlang) fprintf(out,"language=%s\n",cfg->language);
+    if(!wapien) fprintf(out,"api_enabled=%d\n",cfg->api_enabled);
     if(!wapi)  fprintf(out,"api_bind_address=%s\n",cfg->api_bind_address);
     if(!wport) fprintf(out,"api_port=%d\n",cfg->api_port);
     if(!wro)   fprintf(out,"mount_read_only=%d\n",cfg->mount_read_only);
@@ -1092,9 +1096,9 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         int has_lang      = !sm_running || sm_version_at_least(sm_ver,1,7,"alpha",4);
         int has_pim       = !sm_running || sm_version_at_least(sm_ver,1,7,"alpha",4);
         int has_autoremove= !sm_running || sm_version_at_least(sm_ver,1,7,"alpha",3);
-        int has_api       = !sm_running || sm_version_at_least(sm_ver,1,7,"alpha",3);
+        int has_api       = !sm_running || (cfg.api_enabled && sm_version_at_least(sm_ver,1,7,"alpha",3));
         int has_fan       = !sm_running || sm_version_at_least(sm_ver,1,7,"alpha",5);
-        int has_legacy_mp = !sm_running || sm_version_at_least(sm_ver,1,7,"alpha",7);
+        int has_legacy_mp = !sm_running || !sm_version_at_least(sm_ver,1,7,"beta",1);
         int has_emus      = !sm_running || sm_version_at_least(sm_ver,1,7,"alpha",7);
 
         H("<form action='/save' method='POST' onsubmit='try{doSave();}catch(e){}return false;' style='flex:1;min-height:0;display:flex;flex-direction:column;'><div class='layout'>");
@@ -1351,9 +1355,9 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           for(int t=50;t<=91;t++)
               H("<option value='%d'%s>%d&deg;C</option>",t,cur==t?" selected":"",t); }
         H("</select></div></div>");
-        /* Legacy mount profiles (1.7alpha7+) */
-        H("<div style='%s'><div class='sublist-title' style='margin-top:16px;'>%s</div>",
-          has_legacy_mp?"":"opacity:.35;pointer-events:none",L(LS_LEGACY_MOUNT));
+                /* Legacy profiles remain parse-compatible for older SM versions. */
+                H("<div style='%s'><div class='sublist-title' style='margin-top:16px;'>%s</div>",
+                    has_legacy_mp?"":"display:none",L(LS_LEGACY_MOUNT));
         H("<div class='row'><label>legacy_mount_ufs (.ffpkg) <span class='vbadge' style='%s'>ab 1.7alpha7</span></label>"
           "<input type='checkbox' id='lmu' name='legacy_mount_ufs' value='1' %s>"
           "<label class='switch' for='lmu'></label></div>",
@@ -1381,6 +1385,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         H("<div id='panel-api' class='panel'><div id='api-wrap' style='opacity:%s;pointer-events:%s'><div class='section'>",
           has_api?"1":"0.35",has_api?"auto":"none");
         H("<div class='sublist-title'>API</div>");
+        SW("api-enabled","api_enabled","API aktivieren",cfg.api_enabled);
         H("<div class='numfield'><label>%s <span class='vbadge' style='%s'>ab 1.7alpha3</span></label>"
           "<select name='api_bind_address'>"
           "<option value='127.0.0.1'%s>127.0.0.1 &mdash; %s</option>"
@@ -2279,7 +2284,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
         #define GI(name,field) if(mg_http_get_var(&hm->body,name,buf,sizeof(buf))>0) nc.field=atoi(buf);
         #define GS(name,field) if(mg_http_get_var(&hm->body,name,buf,sizeof(buf))>0) strncpy(nc.field,buf,sizeof(nc.field)-1);
         GB("debug",debug) GB("quiet_mode",quiet_mode)
-        GS("language",language)
+        GS("language",language) GB("api_enabled",api_enabled)
         GS("api_bind_address",api_bind_address) GI("api_port",api_port)
         GS("fan_target_temperature",fan_target_temperature)
         GB("mount_read_only",mount_read_only) GB("force_mount",force_mount)

@@ -1379,7 +1379,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
           "<input type='checkbox' id='lmpc' name='legacy_mount_pfsc' value='1' %s>"
           "<label class='switch' for='lmpc'></label></div>",
           has_legacy_mp?"display:none;":"",cfg.legacy_mount_pfsc?"checked":"");
-            H("</div></div>");
+        H("</div>"); /* close legacy wrapper */
         H("</div></div>"); /* close backend section + panel-bkd */
 
         /* Panel: API */

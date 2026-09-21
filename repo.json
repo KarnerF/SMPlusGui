@@ -1,0 +1,14 @@
+{
+  "name": "KarnerF Payloads",
+  "payloads": [
+    {
+      "name": "SMPlusGui",
+      "filename": "SMPlusGui.elf",
+      "url": "https://github.com/KarnerF/SMPlusGui/releases/download/v1.0.1/SMPlusGui_v1.0.1.elf",
+      "description": "Web-based configuration GUI for ShadowMountPlus",
+      "version": "v1.0.1",
+      "category": "ShadowMount",
+      "checksum": "e932617007724b44608e877c715403f8703560c66ebc7d2d4e9b4086602ecc21"
+    }
+  ]
+}

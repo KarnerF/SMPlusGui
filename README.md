@@ -29,6 +29,16 @@ make
 2. Open `http://<PS5-IP>:7777`
 3. Change settings, hit **Save**
 
+### Auto-Update via Payload Manager
+
+Add this URL as a Custom Source in [Payload Manager](https://github.com/itsPLK/ps5-payload-manager) (Settings → Manage Sources → Add Source):
+
+```
+https://raw.githubusercontent.com/KarnerF/SMPlusGui/main/repo.json
+```
+
+Payload Manager will detect new SMPlusGui releases and offer the update automatically.
+
 ---
 
 ## Credits

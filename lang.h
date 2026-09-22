@@ -143,7 +143,7 @@ static int ui_lang = LANG_EN;
 
 static const char *lang_table[LANG_COUNT][LS_COUNT] = {
     /* DE */ {
-        "laeuft",
+        "läuft",
         "nicht aktiv",
         "Warnung: ShadowMount",
         "Image-Overrides",

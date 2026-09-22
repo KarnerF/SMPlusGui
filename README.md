@@ -4,6 +4,8 @@ Web-based config UI for [ShadowMountPlus](https://github.com/drakmor/ShadowMount
 Configure all SM settings from any browser, manage config backups, view the debug log, and autostart SM on launch.
 Opens at **http://\<PS5-IP\>:7777** (port configurable in Startoptionen)
 
+![SMPlusGui — Mounting panel](assets/screenshot.png)
+
 ---
 
 ## Requirements
